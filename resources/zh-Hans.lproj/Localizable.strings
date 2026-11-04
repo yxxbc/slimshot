@@ -3,6 +3,9 @@
 "menu.capture.region" = "区域截图";
 "menu.display" = "截图显示器";
 "menu.display.current" = "当前屏幕（跟随光标）";
+"menu.plugins" = "插件";
+"menu.plugins.empty" = "未发现插件";
+"menu.plugins.no_capture" = "先截一张图再运行";
 "menu.permission.status.granted" = "屏幕录制：已授权";
 "menu.permission.status.denied" = "屏幕录制：未授权";
 "menu.permission" = "屏幕录制权限…";
@@ -53,8 +56,9 @@
 "settings.hotkeys.open_config" = "打开配置文件";
 "settings.plugins.directory" = "插件目录";
 "settings.plugins.user" = "用户插件";
+"settings.plugins.installed" = "已安装";
 "settings.plugins.open" = "打开插件目录";
-"settings.plugins.hint" = "当前版本尚未启用插件。";
+"settings.plugins.hint" = "在菜单栏「插件」中运行；也可以把新插件放进上面的目录。";
 
 "alert.permission.title" = "需要屏幕录制权限";
 "alert.permission.body" = "Slimshot 需要屏幕录制权限才能截图。请前往“系统设置 → 隐私与安全性 → 屏幕与系统音频录制”启用 Slimshot，然后重新启动应用。";
@@ -94,3 +98,10 @@
 "output.error.invalid_path" = "输出路径不是有效的 UTF-8。";
 "output.error.imageio_destination" = "ImageIO 无法创建输出目标。";
 "output.error.encode" = "无法编码截图。";
+
+"plugin.error.no_capture" = "还没有可处理的截图。";
+"plugin.error.response" = "插件返回了无效的响应。";
+"plugin.error.empty" = "插件没有返回内容。";
+"plugin.error.unknown" = "插件运行失败。";
+"plugin.result.done" = "完成";
+"plugin.result.copied" = "已复制到剪贴板";

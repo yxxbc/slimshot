@@ -19,6 +19,7 @@
 #include "hotkeys.h"
 #include "log.h"
 #include "permissions.h"
+#include "plugins.h"
 #include "settings.h"
 #include "status_icon.h"
 
@@ -33,6 +34,7 @@
     CGDirectDisplayID _preferredDisplayID;
     BOOL _hasPreferredDisplay;
     NSMenu *_displayMenu;
+    NSMenu *_pluginsMenu;
     BOOL _permissionAlertShown;
 }
 
@@ -247,9 +249,87 @@
     [self rebuildDisplayMenu];
 }
 
+- (void)addPluginsMenuItemToMenu:(NSMenu *)menu {
+    NSString *title = NSLocalizedString(@"menu.plugins", nil);
+    NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:title
+                                                  action:NULL
+                                           keyEquivalent:@""];
+    _pluginsMenu = [[NSMenu alloc] initWithTitle:title];
+    _pluginsMenu.delegate = self;
+    item.submenu = _pluginsMenu;
+    [menu addItem:item];
+    [self rebuildPluginsMenu];
+}
+
+- (void)rebuildPluginsMenu {
+    if (_pluginsMenu == nil) {
+        return;
+    }
+    [_pluginsMenu removeAllItems];
+
+    SlimPluginManager *manager = [SlimPluginManager sharedManager];
+    [manager reload];
+    NSArray<SlimPlugin *> *plugins = [manager plugins];
+    if (plugins.count == 0) {
+        NSMenuItem *empty =
+            [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"menu.plugins.empty", nil)
+                                       action:NULL
+                                keyEquivalent:@""];
+        empty.enabled = NO;
+        [_pluginsMenu addItem:empty];
+        return;
+    }
+
+    BOOL hasCapture = [manager hasCapture];
+    for (SlimPlugin *plugin in plugins) {
+        NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:plugin.name
+                                                      action:@selector(runPlugin:)
+                                               keyEquivalent:@""];
+        item.target = self;
+        item.representedObject = plugin.identifier;
+        if (plugin.type == SLIM_PLUGIN_POST_PROCESS && !hasCapture) {
+            item.enabled = NO;
+            item.toolTip = NSLocalizedString(@"menu.plugins.no_capture", nil);
+        }
+        [_pluginsMenu addItem:item];
+    }
+}
+
+- (void)runPlugin:(NSMenuItem *)sender {
+    NSString *identifier = sender.representedObject;
+    SlimPluginManager *manager = [SlimPluginManager sharedManager];
+    SlimPlugin *plugin = [manager pluginWithIdentifier:identifier];
+    if (plugin == nil) {
+        return;
+    }
+
+    __weak AppDelegate *weakSelf = self;
+    [manager runPlugin:plugin completion:^(BOOL ok, NSString *message) {
+        AppDelegate *strongSelf = weakSelf;
+        if (strongSelf == nil) {
+            return;
+        }
+        [strongSelf showPluginResult:ok pluginName:plugin.name message:message];
+    }];
+}
+
+- (void)showPluginResult:(BOOL)ok
+              pluginName:(NSString *)pluginName
+                 message:(NSString *)message {
+    [NSApp activateIgnoringOtherApps:YES];
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.alertStyle = ok ? NSAlertStyleInformational : NSAlertStyleWarning;
+    alert.messageText = (pluginName.length > 0) ? pluginName : @"Slimshot";
+    alert.informativeText = (message != nil) ? message : @"";
+    [alert addButtonWithTitle:NSLocalizedString(@"alert.ok", nil)];
+    [alert runModal];
+}
+
 - (void)menuNeedsUpdate:(NSMenu *)menu {
     if (menu == _displayMenu) {
         [self rebuildDisplayMenu];
+    } else if (menu == _pluginsMenu) {
+        [self rebuildPluginsMenu];
     } else {
         [self refreshPermissionStatus];
     }
@@ -277,6 +357,8 @@
 
     [menu addItem:[NSMenuItem separatorItem]];
     [self addDisplayMenuItemToMenu:menu];
+    [menu addItem:[NSMenuItem separatorItem]];
+    [self addPluginsMenuItemToMenu:menu];
     [menu addItem:[NSMenuItem separatorItem]];
 
     _permissionStatusItem = [[NSMenuItem alloc] initWithTitle:@""

@@ -3,6 +3,9 @@
 "menu.capture.region" = "Capture Region";
 "menu.display" = "Capture Display";
 "menu.display.current" = "Current Screen (under cursor)";
+"menu.plugins" = "Plugins";
+"menu.plugins.empty" = "No plugins found";
+"menu.plugins.no_capture" = "Capture something first";
 "menu.permission.status.granted" = "Screen Recording: Granted";
 "menu.permission.status.denied" = "Screen Recording: Not Granted";
 "menu.permission" = "Screen Recording Permission…";
@@ -53,8 +56,9 @@
 "settings.hotkeys.open_config" = "Open Config File";
 "settings.plugins.directory" = "Plugin Folder";
 "settings.plugins.user" = "User plugins";
+"settings.plugins.installed" = "Installed";
 "settings.plugins.open" = "Open Plugin Folder";
-"settings.plugins.hint" = "Plugins are not enabled in this build yet.";
+"settings.plugins.hint" = "Run plugins from the menu bar Plugins menu; drop new ones into the folder above.";
 
 "alert.permission.title" = "Screen Recording Permission Required";
 "alert.permission.body" = "Slimshot needs Screen Recording permission to capture your screen. Open System Settings → Privacy & Security → Screen & System Audio Recording, enable Slimshot, then relaunch the app.";
@@ -94,3 +98,10 @@
 "output.error.invalid_path" = "The output path is not valid UTF-8.";
 "output.error.imageio_destination" = "ImageIO could not create the destination.";
 "output.error.encode" = "Could not encode the screenshot.";
+
+"plugin.error.no_capture" = "There is no capture to process yet.";
+"plugin.error.response" = "The plugin returned an invalid response.";
+"plugin.error.empty" = "The plugin returned nothing.";
+"plugin.error.unknown" = "The plugin failed.";
+"plugin.result.done" = "Done";
+"plugin.result.copied" = "Copied to clipboard";

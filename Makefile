@@ -20,7 +20,8 @@ C_SRCS := \
 	src/core/config.c \
 	src/core/log.c \
 	src/core/naming.c \
-	src/core/paths.c
+	src/core/paths.c \
+	src/core/plugin.c
 
 M_SRCS := \
 	src/main.m \
@@ -35,6 +36,7 @@ M_SRCS := \
 	src/bridge/overlay_view.m \
 	src/bridge/overlay_windows.m \
 	src/bridge/permissions.m \
+	src/bridge/plugins.m \
 	src/bridge/screen_geometry.m \
 	src/bridge/settings.m \
 	src/bridge/settings_sidebar.m \
@@ -84,16 +86,29 @@ $(MACOS_DIR)/$(APP_NAME): $(OBJS)
 	@mkdir -p $(MACOS_DIR)
 	$(CC) $(OBJS) -o $@ $(LDFLAGS)
 
+OCR_BIN := $(BUILD_DIR)/plugins/ocr/ocr
+OCR_SRC := src/plugins/ocr/main.m
+OCR_MANIFEST := src/plugins/ocr/manifest.json
+
+$(OCR_BIN): $(OCR_SRC)
+	@mkdir -p $(dir $@)
+	$(CC) $(OBJCFLAGS) $(OCR_SRC) -o $@ \
+		-framework Foundation -framework Vision -framework ImageIO -framework CoreGraphics
+
 $(APP_BUNDLE): $(MACOS_DIR)/$(APP_NAME) resources/Info.plist \
 		resources/icon/Slimshot.icns \
 		LICENSE \
+		$(OCR_BIN) $(OCR_MANIFEST) \
 		resources/en.lproj/Localizable.strings \
 		resources/zh-Hans.lproj/Localizable.strings \
 		scripts/sign.sh
 	@mkdir -p $(RESOURCES_DIR)/en.lproj $(RESOURCES_DIR)/zh-Hans.lproj
+	@mkdir -p $(RESOURCES_DIR)/Plugins/ocr
 	cp resources/Info.plist $(CONTENTS_DIR)/Info.plist
 	cp resources/icon/Slimshot.icns $(RESOURCES_DIR)/Slimshot.icns
 	cp LICENSE $(RESOURCES_DIR)/LICENSE
+	cp $(OCR_BIN) $(RESOURCES_DIR)/Plugins/ocr/ocr
+	cp $(OCR_MANIFEST) $(RESOURCES_DIR)/Plugins/ocr/manifest.json
 	cp resources/en.lproj/Localizable.strings $(RESOURCES_DIR)/en.lproj/
 	cp resources/zh-Hans.lproj/Localizable.strings $(RESOURCES_DIR)/zh-Hans.lproj/
 	printf 'APPL????' > $(CONTENTS_DIR)/PkgInfo
@@ -112,8 +127,14 @@ $(BUILD_DIR)/config_test: tests/config_test.c src/core/config.c src/core/naming.
 	$(CC) $(TEST_CFLAGS) tests/config_test.c src/core/config.c src/core/naming.c src/core/paths.c \
 		$(VENDOR_OBJS) -o $@
 
-test: $(BUILD_DIR)/config_test
+$(BUILD_DIR)/plugin_test: tests/plugin_test.c src/core/plugin.c src/core/log.c src/core/paths.c $(VENDOR_OBJS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(TEST_CFLAGS) tests/plugin_test.c src/core/plugin.c src/core/log.c src/core/paths.c \
+		$(VENDOR_OBJS) -o $@
+
+test: $(BUILD_DIR)/config_test $(BUILD_DIR)/plugin_test
 	$(BUILD_DIR)/config_test
+	$(BUILD_DIR)/plugin_test
 
 sign: $(APP_BUNDLE)
 	@if [ -z "$(CODESIGN_IDENTITY)" ]; then \

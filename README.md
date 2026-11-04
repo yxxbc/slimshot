@@ -6,7 +6,7 @@
 
 轻量级 macOS 菜单栏截图工具。核心用 C，ScreenCaptureKit / AppKit 放在一层很薄的 Objective-C 桥接里。
 
-> 当前状态：**M1 + 全局热键 + 跨屏区域截图**。全屏 / 窗口 / 区域截图、冻结框选、剪贴板、自动保存、浮动缩略图已接入。设置窗口采用侧边栏布局，包含通用、截图、输出、热键、插件；插件系统仍在 M3。
+> 当前状态：**M1 + 全局热键 + 跨屏区域截图 + M3 插件宿主/OCR**。全屏 / 窗口 / 区域截图、冻结框选、剪贴板、自动保存、浮动缩略图已接入。设置窗口采用侧边栏布局，包含通用、截图、输出、热键、插件；插件菜单已接入 OCR。
 
 ## 环境要求
 
@@ -20,7 +20,7 @@
 make            # 生成 build/Slimshot.app
 make run        # 通过 LaunchServices 启动
 make debug      # 在终端里直接运行，能看到日志
-make test       # 配置读写、命名模板测试
+make test       # 配置、命名、插件发现/运行/超时测试
 make clean
 ```
 
@@ -74,6 +74,26 @@ M1 实测（arm64）：bundle 约 264 KB，zip 约 96 KB，空闲 `phys_footprin
 每块屏幕一个覆盖层窗口，共享同一份全局选区；不假设左右排列，上下、错位、负坐标都支持。
 
 窗口模式：点击高亮窗口直接截图。
+
+## 设置
+
+菜单栏 →「设置…」是侧边栏布局：
+
+- **通用**：屏幕录制状态、打开系统设置、配置文件路径
+- **截图**：包含鼠标指针、剪贴板、自动保存、浮动缩略图和显示时长
+- **输出**：格式、JPEG/HEIC 质量、保存目录
+- **热键**：查看当前全屏/窗口/区域热键，打开配置文件
+- **插件**：用户插件目录、已安装插件列表
+
+## 插件
+
+菜单栏 →「插件」：对最近一次截图运行插件。没有截图时 `post-process` 插件置灰。
+
+- 内置 **OCR**：使用 Vision 识别中英文，结果自动复制到剪贴板并提示字符数
+- 用户插件目录：`~/Library/Application Support/Slimshot/Plugins/<id>/`
+- 每个插件是一个可执行文件 + `manifest.json`，通过 stdin/stdout 的 JSON 通信
+
+插件的清单、协议、超时和信任模型见 [docs/plugins.md](docs/plugins.md)。
 
 ## 输出
 
@@ -143,24 +163,26 @@ zip 内包含 `Slimshot.app`、`install.command`、`LICENSE` 和本 README。解
 ## 目录结构
 
 ```text
-src/core/        C 核心：配置、命名、路径、日志
-src/bridge/      ObjC 桥接：菜单栏、设置、SCK 截图、框选层、输出、缩略图
+src/core/        C 核心：配置、命名、路径、日志、插件发现与进程调度
+src/bridge/      ObjC 桥接：菜单栏、设置、SCK 截图、框选层、输出、缩略图、插件菜单
+src/plugins/ocr/ OCR 参考插件（Vision）
 src/vendor/      cJSON 1.7.18（MIT）
 resources/       Info.plist、中英文 strings、icon（PNG + icns）
-tests/           配置、命名测试
+tests/           配置、命名、插件测试
 scripts/         构建、签名、证书、打包、安装
-docs/            设计笔记：覆盖层坐标系、设置与关于界面布局
+docs/            设计笔记：覆盖层坐标系、界面布局、插件协议
 ```
 
 ## 设计文档
 
 - [跨屏覆盖层与坐标系](docs/cross-screen-overlay.md)：多显示器、Retina、负坐标下的覆盖层设计与事故复盘
 - [设置与关于界面布局](docs/ui-layout.md)：间距、对齐、窗口结构和控件顺序
+- [插件](docs/plugins.md)：目录、manifest、stdin/stdout 协议、OCR 参考插件和信任模型
 
 ## 路线图
 
 - M1：全屏 / 窗口 / 区域冻结框选、窗口高亮、剪贴板、保存、缩略图
-- M2：完整设置窗口（Carbon 全局热键已完成）
+- M2：侧边栏设置窗口、配置读写、格式/质量/路径、热键概览
 - M3：插件宿主 + JSON 协议 + OCR 参考插件
 - M4：Sparkle 2、appcast、downvid 式更新脚本、GitHub Actions 发布
 

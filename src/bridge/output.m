@@ -17,6 +17,7 @@
 #include "naming.h"
 #include "output.h"
 #include "paths.h"
+#include "plugins.h"
 #include "thumbnail.h"
 
 static CFStringRef SlimUTIForFormat(const char *format) {
@@ -150,6 +151,35 @@ static void SlimShowError(NSString *title, NSString *message) {
     [alert runModal];
 }
 
+static NSString *SlimWritePluginCapture(CGImageRef image) {
+    NSBitmapImageRep *rep = [[NSBitmapImageRep alloc] initWithCGImage:image];
+    if (rep == nil) {
+        return nil;
+    }
+    NSData *png = [rep representationUsingType:NSBitmapImageFileTypePNG
+                                    properties:@{}];
+    if (png == nil) {
+        return nil;
+    }
+
+    NSString *temporary = NSTemporaryDirectory();
+    if (temporary.length == 0) {
+        temporary = @"/tmp";
+    }
+    NSString *directory = [temporary stringByAppendingPathComponent:@"Slimshot"];
+    if (![[NSFileManager defaultManager] createDirectoryAtPath:directory
+                                  withIntermediateDirectories:YES
+                                                   attributes:nil
+                                                        error:NULL]) {
+        return nil;
+    }
+    NSString *path = [directory stringByAppendingPathComponent:@"last-capture.png"];
+    if (![png writeToFile:path atomically:YES]) {
+        return nil;
+    }
+    return path;
+}
+
 void slim_output_handle(CGImageRef image, const slim_config_t *config, NSScreen *screen,
                         const char *source) {
     if (image == NULL || config == NULL) {
@@ -176,6 +206,24 @@ void slim_output_handle(CGImageRef image, const slim_config_t *config, NSScreen 
         } else {
             slim_log("copy %s capture to clipboard failed", src);
         }
+    }
+
+    NSString *pluginPath = savedPath;
+    if (pluginPath == nil &&
+        [[SlimPluginManager sharedManager] hasPostProcessPlugins]) {
+        pluginPath = SlimWritePluginCapture(image);
+        if (pluginPath != nil) {
+            slim_log("plugin capture: %s", pluginPath.UTF8String);
+        }
+    }
+    if (pluginPath != nil) {
+        double scale = (screen != nil) ? screen.backingScaleFactor : 1.0;
+        [[SlimPluginManager sharedManager]
+            noteCaptureWithPath:pluginPath
+                          width:(int)CGImageGetWidth(image)
+                         height:(int)CGImageGetHeight(image)
+                          scale:scale
+                         source:[NSString stringWithUTF8String:src]];
     }
 
     if (config->show_thumbnail) {

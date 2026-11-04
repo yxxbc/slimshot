@@ -1,0 +1,8 @@
+{
+  "id": "ocr",
+  "name": "OCR",
+  "version": "0.1.0",
+  "type": "post-process",
+  "exec": "ocr",
+  "timeout_ms": 15000
+}

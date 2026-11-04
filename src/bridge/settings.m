@@ -14,6 +14,7 @@
 #include "config.h"
 #include "paths.h"
 #include "permissions.h"
+#include "plugins.h"
 #include "settings.h"
 #include "settings_sidebar.h"
 
@@ -42,6 +43,7 @@ static const CGFloat kSettingsWindowHeight = 520.0;
     NSTextField *_folderLabel;
     NSTextField *_permissionStatusLabel;
     NSTextField *_configPathLabel;
+    NSTextField *_installedPluginsLabel;
     NSString *_pluginDirectoryPath;
 }
 
@@ -504,6 +506,29 @@ static const CGFloat kSettingsWindowHeight = 520.0;
                       label:NSLocalizedString(@"settings.plugins.user", nil)
                     control:control];
 
+        NSArray<SlimPlugin *> *plugins = [[SlimPluginManager sharedManager] plugins];
+        NSMutableArray<NSString *> *names = [NSMutableArray array];
+        for (SlimPlugin *plugin in plugins) {
+            if (plugin.name.length > 0) {
+                [names addObject:plugin.name];
+            }
+        }
+        NSString *installedText = (names.count > 0)
+                                      ? [names componentsJoinedByString:@", "]
+                                      : @"—";
+        _installedPluginsLabel = [NSTextField labelWithString:installedText];
+        _installedPluginsLabel.font = [NSFont systemFontOfSize:12.0];
+        _installedPluginsLabel.textColor = [NSColor secondaryLabelColor];
+        _installedPluginsLabel.lineBreakMode = NSLineBreakByTruncatingTail;
+        _installedPluginsLabel.maximumNumberOfLines = 1;
+        _installedPluginsLabel.toolTip = installedText;
+        [_installedPluginsLabel
+            setContentCompressionResistancePriority:NSLayoutPriorityDefaultLow
+                                     forOrientation:NSLayoutConstraintOrientationHorizontal];
+        [self addRowToStack:stack
+                      label:NSLocalizedString(@"settings.plugins.installed", nil)
+                    control:_installedPluginsLabel];
+
         NSTextField *hint =
             [NSTextField labelWithString:NSLocalizedString(@"settings.plugins.hint", nil)];
         hint.font = [NSFont systemFontOfSize:11.0];
@@ -535,7 +560,25 @@ static const CGFloat kSettingsWindowHeight = 520.0;
     [_formatPopup selectItemAtIndex:(index == NSNotFound) ? 0 : (NSInteger)index];
 
     [self updateFolderLabel];
+    [self updateInstalledPluginsLabel];
     [self refreshPermissionStatus];
+}
+
+- (void)updateInstalledPluginsLabel {
+    if (_installedPluginsLabel == nil) {
+        return;
+    }
+    NSMutableArray<NSString *> *names = [NSMutableArray array];
+    for (SlimPlugin *plugin in [[SlimPluginManager sharedManager] plugins]) {
+        if (plugin.name.length > 0) {
+            [names addObject:plugin.name];
+        }
+    }
+    NSString *text = (names.count > 0)
+                         ? [names componentsJoinedByString:@", "]
+                         : @"—";
+    _installedPluginsLabel.stringValue = text;
+    _installedPluginsLabel.toolTip = text;
 }
 
 - (void)updateThumbnailSecondsLabel {
@@ -712,6 +755,8 @@ static const CGFloat kSettingsWindowHeight = 520.0;
 
 - (void)present {
     [NSApp activateIgnoringOtherApps:YES];
+    [[SlimPluginManager sharedManager] reload];
+    [self updateInstalledPluginsLabel];
     [self refreshPermissionStatus];
     [self.window makeKeyAndOrderFront:nil];
 }
