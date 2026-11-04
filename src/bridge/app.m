@@ -6,6 +6,7 @@
  */
 
 #import <Cocoa/Cocoa.h>
+#import <CoreGraphics/CoreGraphics.h>
 #import <dispatch/dispatch.h>
 
 #include <stdlib.h>
@@ -26,7 +27,8 @@
     SettingsWindowController *_settingsController;
     SlimCaptureController *_captureController;
     SlimHotKeyManager *_hotKeyManager;
-    NSScreen *_preferredScreen;
+    CGDirectDisplayID _preferredDisplayID;
+    BOOL _hasPreferredDisplay;
     NSMenu *_displayMenu;
     BOOL _permissionAlertShown;
 }
@@ -50,6 +52,10 @@
 
     [self setupStatusItem];
     [self setupMenu];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(screenParametersDidChange:)
+                                                 name:NSApplicationDidChangeScreenParametersNotification
+                                               object:nil];
     [self refreshPermissionStatus];
     slim_log("screen recording authorized: %s",
              slim_screen_capture_authorized() ? "yes" : "no");
@@ -150,6 +156,28 @@
                                                          action:NULL
                                                   keyEquivalent:@""];
     _displayMenu = [[NSMenu alloc] initWithTitle:title];
+    _displayMenu.delegate = self;
+    displayItem.submenu = _displayMenu;
+    [menu addItem:displayItem];
+    [self rebuildDisplayMenu];
+}
+
+- (NSScreen *)screenForDisplayID:(CGDirectDisplayID)displayID {
+    for (NSScreen *screen in [NSScreen screens]) {
+        NSNumber *screenNumber = screen.deviceDescription[@"NSScreenNumber"];
+        if (screenNumber != nil &&
+            (CGDirectDisplayID)screenNumber.unsignedIntValue == displayID) {
+            return screen;
+        }
+    }
+    return nil;
+}
+
+- (void)rebuildDisplayMenu {
+    if (_displayMenu == nil) {
+        return;
+    }
+    [_displayMenu removeAllItems];
 
     NSMenuItem *currentItem =
         [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"menu.display.current", nil)
@@ -157,40 +185,77 @@
                             keyEquivalent:@""];
     currentItem.target = self;
     currentItem.tag = 0;
-    currentItem.state = (_preferredScreen == nil) ? NSControlStateValueOn
-                                                  : NSControlStateValueOff;
+    currentItem.state = _hasPreferredDisplay ? NSControlStateValueOff : NSControlStateValueOn;
     [_displayMenu addItem:currentItem];
 
+    BOOL preferredFound = NO;
     for (NSScreen *screen in [NSScreen screens]) {
+        NSNumber *screenNumber = screen.deviceDescription[@"NSScreenNumber"];
+        if (screenNumber == nil) {
+            continue;
+        }
+        CGDirectDisplayID displayID = (CGDirectDisplayID)screenNumber.unsignedIntValue;
         NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:screen.localizedName
                                                       action:@selector(selectCaptureScreen:)
                                                keyEquivalent:@""];
         item.target = self;
         item.tag = 1;
-        item.representedObject = screen;
-        item.state = (_preferredScreen == screen) ? NSControlStateValueOn
-                                                  : NSControlStateValueOff;
+        item.representedObject = @(displayID);
+        if (_hasPreferredDisplay && displayID == _preferredDisplayID) {
+            item.state = NSControlStateValueOn;
+            preferredFound = YES;
+        }
         [_displayMenu addItem:item];
     }
 
-    displayItem.submenu = _displayMenu;
-    [menu addItem:displayItem];
+    if (_hasPreferredDisplay && !preferredFound) {
+        slim_log("preferred display %u disconnected; following cursor",
+                 _preferredDisplayID);
+        _hasPreferredDisplay = NO;
+        currentItem.state = NSControlStateValueOn;
+    }
 }
 
 - (void)selectCaptureScreen:(NSMenuItem *)sender {
     if (sender.tag == 0) {
-        _preferredScreen = nil;
+        _hasPreferredDisplay = NO;
+        slim_log("capture display: following cursor");
     } else {
-        _preferredScreen = sender.representedObject;
+        NSNumber *screenNumber = sender.representedObject;
+        _preferredDisplayID = (CGDirectDisplayID)screenNumber.unsignedIntValue;
+        _hasPreferredDisplay = YES;
+        slim_log("capture display selected: %u", _preferredDisplayID);
     }
+
     for (NSMenuItem *item in _displayMenu.itemArray) {
         item.state = NSControlStateValueOff;
     }
     sender.state = NSControlStateValueOn;
 }
 
+- (void)screenParametersDidChange:(NSNotification *)notification {
+    (void)notification;
+    slim_log("screen parameters changed: %lu screens",
+             (unsigned long)[NSScreen screens].count);
+    if (_hasPreferredDisplay && [self screenForDisplayID:_preferredDisplayID] == nil) {
+        slim_log("preferred display %u disconnected; following cursor",
+                 _preferredDisplayID);
+        _hasPreferredDisplay = NO;
+    }
+    [self rebuildDisplayMenu];
+}
+
+- (void)menuNeedsUpdate:(NSMenu *)menu {
+    if (menu == _displayMenu) {
+        [self rebuildDisplayMenu];
+    } else {
+        [self refreshPermissionStatus];
+    }
+}
+
 - (void)setupMenu {
     NSMenu *menu = [[NSMenu alloc] initWithTitle:@"Slimshot"];
+    menu.delegate = self;
 
     [self addCaptureItemToMenu:menu
                       titleKey:@"menu.capture.full"
@@ -299,10 +364,20 @@
         return;
     }
 
+    NSScreen *preferredScreen = nil;
+    if (_hasPreferredDisplay) {
+        preferredScreen = [self screenForDisplayID:_preferredDisplayID];
+        if (preferredScreen == nil) {
+            slim_log("preferred display %u not found; following cursor",
+                     _preferredDisplayID);
+            _hasPreferredDisplay = NO;
+        }
+    }
+
     if (_captureController == nil) {
         _captureController = [[SlimCaptureController alloc] initWithConfig:&_config];
     }
-    [_captureController captureMode:mode onScreen:_preferredScreen];
+    [_captureController captureMode:mode onScreen:preferredScreen];
 }
 
 - (void)captureFullScreen:(id)sender {
@@ -341,6 +416,7 @@
 
 - (void)applicationWillTerminate:(NSNotification *)notification {
     (void)notification;
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
     [_hotKeyManager unregisterAll];
     slim_log("Slimshot exiting");
     slim_log_close();
