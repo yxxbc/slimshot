@@ -9,25 +9,60 @@
 
 #include <math.h>
 
+#include "plugins.h"
 #include "thumbnail.h"
 
 @interface SlimThumbnailView : NSView
-- (instancetype)initWithFrame:(NSRect)frame image:(NSImage *)image filePath:(NSString *)filePath;
+- (instancetype)initWithFrame:(NSRect)frame
+                        image:(NSImage *)image
+                     filePath:(NSString *)filePath
+                      plugins:(NSArray<SlimPlugin *> *)plugins;
 @end
 
 @implementation SlimThumbnailView {
     NSImage *_image;
     NSString *_filePath;
+    NSArray<SlimPlugin *> *_plugins;
+    NSRect _imageRect;
     BOOL _dragged;
     NSPoint _dragStart;
     NSRect _initialFrame;
 }
 
-- (instancetype)initWithFrame:(NSRect)frame image:(NSImage *)image filePath:(NSString *)filePath {
+- (instancetype)initWithFrame:(NSRect)frame
+                        image:(NSImage *)image
+                     filePath:(NSString *)filePath
+                      plugins:(NSArray<SlimPlugin *> *)plugins {
     self = [super initWithFrame:frame];
     if (self != nil) {
         _image = image;
         _filePath = [filePath copy];
+        _plugins = [plugins copy];
+
+        CGFloat bottom = (_plugins.count > 0) ? 34.0 : 6.0;
+        _imageRect = NSMakeRect(6.0, bottom, frame.size.width - 12.0,
+                                frame.size.height - bottom - 6.0);
+
+        if (_plugins.count > 0) {
+            CGFloat x = 8.0;
+            NSDictionary *attributes =
+                @{ NSFontAttributeName : [NSFont systemFontOfSize:11.0] };
+            for (SlimPlugin *plugin in _plugins) {
+                NSButton *button =
+                    [NSButton buttonWithTitle:plugin.name
+                                       target:self
+                                       action:@selector(pluginButtonClicked:)];
+                button.bezelStyle = NSBezelStyleRounded;
+                button.controlSize = NSControlSizeSmall;
+                button.font = [NSFont systemFontOfSize:11.0];
+                button.identifier = plugin.identifier;
+                CGFloat width =
+                    MAX(44.0, [plugin.name sizeWithAttributes:attributes].width + 16.0);
+                button.frame = NSMakeRect(x, 6.0, width, 22.0);
+                [self addSubview:button];
+                x += width + 6.0;
+            }
+        }
     }
     return self;
 }
@@ -48,8 +83,16 @@
     background.lineWidth = 1.0;
     [background stroke];
 
-    NSRect imageRect = NSInsetRect(self.bounds, 6.0, 6.0);
-    [_image drawInRect:imageRect
+    if (_plugins.count > 0) {
+        NSBezierPath *divider = [NSBezierPath bezierPath];
+        [divider moveToPoint:NSMakePoint(6.0, 34.0)];
+        [divider lineToPoint:NSMakePoint(self.bounds.size.width - 6.0, 34.0)];
+        [[NSColor.separatorColor colorWithAlphaComponent:0.6] setStroke];
+        divider.lineWidth = 1.0;
+        [divider stroke];
+    }
+
+    [_image drawInRect:_imageRect
               fromRect:NSZeroRect
              operation:NSCompositingOperationSourceOver
               fraction:1.0
@@ -79,14 +122,27 @@
 }
 
 - (void)mouseUp:(NSEvent *)event {
-    (void)event;
-    if (!_dragged && _filePath.length > 0) {
+    NSPoint point = [self convertPoint:event.locationInWindow fromView:nil];
+    if (!_dragged && NSPointInRect(point, _imageRect) && _filePath.length > 0) {
         NSURL *url = [NSURL fileURLWithPath:_filePath];
         (void)[[NSWorkspace sharedWorkspace] openURL:url];
         dispatch_async(dispatch_get_main_queue(), ^{
             slim_thumbnail_hide();
         });
     }
+}
+
+- (void)pluginButtonClicked:(NSButton *)sender {
+    NSString *identifier = sender.identifier;
+    SlimPluginManager *manager = [SlimPluginManager sharedManager];
+    SlimPlugin *plugin = [manager pluginWithIdentifier:identifier];
+    if (plugin == nil) {
+        return;
+    }
+    slim_thumbnail_hide();
+    [manager runPlugin:plugin completion:^(BOOL ok, NSString *message) {
+        SlimPresentPluginResult(ok, plugin.name, message);
+    }];
 }
 
 - (void)rightMouseDown:(NSEvent *)event {
@@ -144,7 +200,27 @@ void slim_thumbnail_show(CGImageRef image, NSScreen *screen, NSString *filePath,
                                  maxHeight / (CGFloat)pixelHeight));
     CGFloat imageWidth = MAX(80.0, (CGFloat)pixelWidth * scale);
     CGFloat imageHeight = MAX(60.0, (CGFloat)pixelHeight * scale);
-    NSSize contentSize = NSMakeSize(imageWidth + 12.0, imageHeight + 12.0);
+
+    NSMutableArray<SlimPlugin *> *plugins = [NSMutableArray array];
+    for (SlimPlugin *plugin in [[SlimPluginManager sharedManager] plugins]) {
+        if (plugin.type == SLIM_PLUGIN_POST_PROCESS) {
+            [plugins addObject:plugin];
+        }
+    }
+    NSDictionary *buttonAttributes =
+        @{ NSFontAttributeName : [NSFont systemFontOfSize:11.0] };
+    CGFloat rowWidth = 8.0;
+    for (SlimPlugin *plugin in plugins) {
+        rowWidth += MAX(44.0, [plugin.name sizeWithAttributes:buttonAttributes].width + 16.0) +
+                    6.0;
+    }
+
+    CGFloat contentWidth = imageWidth + 12.0;
+    if (plugins.count > 0) {
+        contentWidth = MAX(contentWidth, rowWidth + 8.0);
+    }
+    CGFloat contentHeight = imageHeight + 12.0 + ((plugins.count > 0) ? 28.0 : 0.0);
+    NSSize contentSize = NSMakeSize(contentWidth, contentHeight);
 
     NSImage *nsImage = [[NSImage alloc] initWithCGImage:image
                                                    size:NSMakeSize((CGFloat)pixelWidth,
@@ -153,7 +229,8 @@ void slim_thumbnail_show(CGImageRef image, NSScreen *screen, NSString *filePath,
         [[SlimThumbnailView alloc] initWithFrame:NSMakeRect(0, 0, contentSize.width,
                                                             contentSize.height)
                                            image:nsImage
-                                        filePath:filePath];
+                                        filePath:filePath
+                                         plugins:plugins];
 
     NSPanel *panel =
         [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, contentSize.width,
@@ -190,6 +267,9 @@ void slim_thumbnail_show(CGImageRef image, NSScreen *screen, NSString *filePath,
     controller.generation = ++gGeneration;
     gCurrent = controller;
 
+    if (plugins.count > 0 && seconds > 0) {
+        seconds = MAX(seconds, 8);
+    }
     if (seconds > 0) {
         NSUInteger generation = controller.generation;
         __weak SlimThumbnailController *weakController = controller;
