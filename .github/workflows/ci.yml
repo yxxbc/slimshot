@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache Sparkle
+        uses: actions/cache@v4
+        with:
+          path: vendor/sparkle
+          key: sparkle-2.7.1-${{ runner.os }}
+
+      - name: Fetch Sparkle
+        run: ./scripts/fetch-sparkle.sh
+
+      - name: Build
+        run: make
+
+      - name: Test
+        run: make test
+
+      - name: Package
+        run: make dist
+
+      - name: Verify signature
+        run: codesign --verify --deep --strict build/Slimshot.app
