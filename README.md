@@ -89,6 +89,7 @@ M1 实测（arm64）：bundle 约 264 KB，zip 约 96 KB，空闲 `phys_footprin
 
 菜单栏 →「插件」：对最近一次截图运行插件。没有截图时 `post-process` 插件置灰。
 
+- 区域框选后的操作条会直接显示 OCR 按钮，点一下完成截图并立即识别
 - 内置 **OCR**：使用 Vision 识别中英文，结果自动复制到剪贴板并提示字符数
 - 用户插件目录：`~/Library/Application Support/Slimshot/Plugins/<id>/`
 - 每个插件是一个可执行文件 + `manifest.json`，通过 stdin/stdout 的 JSON 通信

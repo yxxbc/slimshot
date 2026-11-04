@@ -24,7 +24,10 @@
     SlimOverlayView *_startView;
     NSRunningApplication *_previousApp;
     NSArray<SlimScreenCapture *> *_captures;
-    void (^_onRegion)(NSArray<SlimScreenCapture *> *captures, CGRect selectionGlobal);
+    NSArray<SlimOverlayPluginAction *> *_pluginActions;
+    void (^_onRegion)(NSArray<SlimScreenCapture *> *captures,
+                      CGRect selectionGlobal,
+                      NSString *pluginID);
     void (^_onWindow)(SCWindow *window);
     void (^_onCancel)(void);
     BOOL _finished;
@@ -34,8 +37,10 @@
               screenCaptures:(NSArray<SlimScreenCapture *> *)captures
             shareableContent:(SCShareableContent *)content
                  startScreen:(NSScreen *)startScreen
+               pluginActions:(NSArray<SlimOverlayPluginAction *> *)pluginActions
                     onRegion:(void (^)(NSArray<SlimScreenCapture *> *captures,
-                                       CGRect selectionGlobal))onRegion
+                                       CGRect selectionGlobal,
+                                       NSString *pluginID))onRegion
                     onWindow:(void (^)(SCWindow *window))onWindow
                     onCancel:(void (^)(void))onCancel {
     self = [super init];
@@ -52,6 +57,7 @@
     _onWindow = [onWindow copy];
     _onCancel = [onCancel copy];
     _captures = [captures copy];
+    _pluginActions = [pluginActions copy];
 
     NSArray<NSScreen *> *allScreens = [NSScreen screens];
     CGFloat mainHeight = SlimMainScreenHeight();
@@ -119,6 +125,7 @@
         [view setHintRect:view.bounds];
         [view setShowsHint:(screen == targetScreen)];
         [view setShowsToolbar:NO];
+        [view setPluginActions:_pluginActions];
 
         SlimOverlayWindow *window =
             [[SlimOverlayWindow alloc] initWithContentRect:screenFrame
@@ -267,7 +274,9 @@
     }
 }
 
-- (void)overlayView:(SlimOverlayView *)view didSelectRegion:(NSRect)rect {
+- (void)overlayView:(SlimOverlayView *)view
+     didSelectRegion:(NSRect)rect
+           pluginID:(NSString *)pluginID {
     if (_finished) {
         return;
     }
@@ -278,12 +287,12 @@
                                         rect.origin.y + ref.origin.y,
                                         rect.size.width, rect.size.height);
 
-    void (^regionBlock)(NSArray<SlimScreenCapture *> *, CGRect) = _onRegion;
+    void (^regionBlock)(NSArray<SlimScreenCapture *> *, CGRect, NSString *) = _onRegion;
     _onRegion = nil;
     _onWindow = nil;
     _onCancel = nil;
     if (regionBlock != nil) {
-        regionBlock(_captures, selectionGlobal);
+        regionBlock(_captures, selectionGlobal, pluginID);
     }
     [self closeOverlay];
 }

@@ -34,3 +34,12 @@
 }
 
 @end
+
+@implementation SlimOverlayPluginAction
++ (instancetype)actionWithIdentifier:(NSString *)identifier title:(NSString *)title {
+    SlimOverlayPluginAction *action = [[self alloc] init];
+    action.identifier = identifier;
+    action.title = title;
+    return action;
+}
+@end

@@ -38,4 +38,6 @@
        completion:(void (^)(BOOL ok, NSString *message))completion;
 @end
 
+void SlimPresentPluginResult(BOOL ok, NSString *pluginName, NSString *message);
+
 #endif /* SLIM_PLUGINS_H */

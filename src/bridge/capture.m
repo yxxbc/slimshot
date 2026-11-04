@@ -16,6 +16,7 @@
 #include "log.h"
 #include "output.h"
 #include "overlay.h"
+#include "plugins.h"
 #include "screen_geometry.h"
 #include "thumbnail.h"
 
@@ -278,17 +279,30 @@
                                  content:(SCShareableContent *)content
                              startScreen:(NSScreen *)startScreen {
     __weak SlimCaptureController *weakSelf = self;
+    NSMutableArray<SlimOverlayPluginAction *> *pluginActions = [NSMutableArray array];
+    for (SlimPlugin *plugin in [[SlimPluginManager sharedManager] plugins]) {
+        if (plugin.type == SLIM_PLUGIN_POST_PROCESS) {
+            [pluginActions addObject:
+                [SlimOverlayPluginAction actionWithIdentifier:plugin.identifier
+                                                        title:plugin.name]];
+        }
+    }
+
     SlimOverlayController *overlay = [[SlimOverlayController alloc]
         initWithMode:SlimOverlayModeRegion
         screenCaptures:captures
       shareableContent:content
            startScreen:startScreen
-              onRegion:^(NSArray<SlimScreenCapture *> *allCaptures, CGRect selectionGlobal) {
+         pluginActions:pluginActions
+              onRegion:^(NSArray<SlimScreenCapture *> *allCaptures,
+                         CGRect selectionGlobal,
+                         NSString *pluginID) {
                   SlimCaptureController *strongSelf = weakSelf;
                   if (strongSelf != nil) {
                       [strongSelf handleRegionSelection:selectionGlobal
                                                captures:allCaptures
-                                                 screen:startScreen];
+                                                 screen:startScreen
+                                               pluginID:pluginID];
                   }
               }
               onWindow:^(SCWindow *window) {
@@ -311,7 +325,8 @@
 
 - (void)handleRegionSelection:(CGRect)selection
                      captures:(NSArray<SlimScreenCapture *> *)captures
-                       screen:(NSScreen *)screen {
+                       screen:(NSScreen *)screen
+                     pluginID:(NSString *)pluginID {
     CGImageRef image = SlimCopyCompositeFromCaptures(captures, selection);
     if (image == NULL) {
         slim_log("region composite failed");
@@ -327,8 +342,22 @@
         SlimCaptureController *strongSelf = weakSelf;
         if (strongSelf != nil) {
             strongSelf->_busy = NO;
+            if (pluginID.length > 0) {
+                [strongSelf runPluginID:pluginID];
+            }
         }
     });
+}
+
+- (void)runPluginID:(NSString *)identifier {
+    SlimPluginManager *manager = [SlimPluginManager sharedManager];
+    SlimPlugin *plugin = [manager pluginWithIdentifier:identifier];
+    if (plugin == nil) {
+        return;
+    }
+    [manager runPlugin:plugin completion:^(BOOL ok, NSString *message) {
+        SlimPresentPluginResult(ok, plugin.name, message);
+    }];
 }
 
 - (void)presentWindowOverlayForScreen:(NSScreen *)screen
@@ -340,9 +369,13 @@
         screenCaptures:@[]
       shareableContent:content
            startScreen:screen
-              onRegion:^(NSArray<SlimScreenCapture *> *captures, CGRect selectionGlobal) {
+         pluginActions:@[]
+              onRegion:^(NSArray<SlimScreenCapture *> *captures,
+                         CGRect selectionGlobal,
+                         NSString *pluginID) {
                   (void)captures;
                   (void)selectionGlobal;
+                  (void)pluginID;
               }
               onWindow:^(SCWindow *window) {
                   SlimCaptureController *strongSelf = weakSelf;

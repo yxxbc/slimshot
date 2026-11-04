@@ -303,26 +303,9 @@
         return;
     }
 
-    __weak AppDelegate *weakSelf = self;
     [manager runPlugin:plugin completion:^(BOOL ok, NSString *message) {
-        AppDelegate *strongSelf = weakSelf;
-        if (strongSelf == nil) {
-            return;
-        }
-        [strongSelf showPluginResult:ok pluginName:plugin.name message:message];
+        SlimPresentPluginResult(ok, plugin.name, message);
     }];
-}
-
-- (void)showPluginResult:(BOOL)ok
-              pluginName:(NSString *)pluginName
-                 message:(NSString *)message {
-    [NSApp activateIgnoringOtherApps:YES];
-    NSAlert *alert = [[NSAlert alloc] init];
-    alert.alertStyle = ok ? NSAlertStyleInformational : NSAlertStyleWarning;
-    alert.messageText = (pluginName.length > 0) ? pluginName : @"Slimshot";
-    alert.informativeText = (message != nil) ? message : @"";
-    [alert addButtonWithTitle:NSLocalizedString(@"alert.ok", nil)];
-    [alert runModal];
 }
 
 - (void)menuNeedsUpdate:(NSMenu *)menu {

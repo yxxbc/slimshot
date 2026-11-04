@@ -294,3 +294,13 @@
 }
 
 @end
+
+void SlimPresentPluginResult(BOOL ok, NSString *pluginName, NSString *message) {
+    [NSApp activateIgnoringOtherApps:YES];
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.alertStyle = ok ? NSAlertStyleInformational : NSAlertStyleWarning;
+    alert.messageText = (pluginName.length > 0) ? pluginName : @"Slimshot";
+    alert.informativeText = (message != nil) ? message : @"";
+    [alert addButtonWithTitle:NSLocalizedString(@"alert.ok", nil)];
+    [alert runModal];
+}

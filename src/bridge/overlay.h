@@ -22,13 +22,21 @@ typedef NS_ENUM(NSInteger, SlimOverlayMode) {
 @property (nonatomic, readonly) CGImageRef image;
 @end
 
+@interface SlimOverlayPluginAction : NSObject
+@property (nonatomic, copy) NSString *identifier;
+@property (nonatomic, copy) NSString *title;
++ (instancetype)actionWithIdentifier:(NSString *)identifier title:(NSString *)title;
+@end
+
 @interface SlimOverlayController : NSObject
 - (instancetype)initWithMode:(SlimOverlayMode)mode
               screenCaptures:(NSArray<SlimScreenCapture *> *)captures
             shareableContent:(SCShareableContent *)content
                  startScreen:(NSScreen *)startScreen
+               pluginActions:(NSArray<SlimOverlayPluginAction *> *)pluginActions
                     onRegion:(void (^)(NSArray<SlimScreenCapture *> *captures,
-                                       CGRect selectionGlobal))onRegion
+                                       CGRect selectionGlobal,
+                                       NSString *pluginID))onRegion
                     onWindow:(void (^)(SCWindow *window))onWindow
                     onCancel:(void (^)(void))onCancel;
 - (void)show;

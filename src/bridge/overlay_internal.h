@@ -36,7 +36,9 @@ NSArray<SlimWindowInfo *> *SlimBuildWindowInfos(SCShareableContent *content);
 @class SlimOverlayView;
 
 @protocol SlimOverlayViewDelegate <NSObject>
-- (void)overlayView:(SlimOverlayView *)view didSelectRegion:(NSRect)rect;
+- (void)overlayView:(SlimOverlayView *)view
+     didSelectRegion:(NSRect)rect
+           pluginID:(NSString *)pluginID;
 - (void)overlayView:(SlimOverlayView *)view didSelectWindow:(SCWindow *)window;
 - (void)overlayViewDidCancel:(SlimOverlayView *)view;
 - (void)overlayViewDidChangeSelection:(SlimOverlayView *)view;
@@ -55,6 +57,7 @@ NSArray<SlimWindowInfo *> *SlimBuildWindowInfos(SCShareableContent *content);
 - (void)setSelectionRect:(NSRect)rect;
 - (void)setShowsToolbar:(BOOL)flag;
 - (void)setShowsHint:(BOOL)flag;
+- (void)setPluginActions:(NSArray<SlimOverlayPluginAction *> *)actions;
 - (NSRect)selectionRect;
 - (CGRect)selectionGlobalRect;
 - (CGRect)referenceCg;

@@ -76,6 +76,7 @@
 "alert.output_failed.title" = "无法保存截图";
 "overlay.capture" = "✓ 截图";
 "overlay.cancel" = "× 取消";
+"overlay.plugins" = "插件";
 "overlay.hint.region" = "拖动框选 · 点击窗口直接截图 · Esc 取消";
 "overlay.hint.window" = "点击窗口截图 · Esc 取消";
 
