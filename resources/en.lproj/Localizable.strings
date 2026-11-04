@@ -1,0 +1,63 @@
+"menu.capture.full" = "Capture Full Screen";
+"menu.capture.window" = "Capture Window";
+"menu.capture.region" = "Capture Region";
+"menu.display" = "Capture Display";
+"menu.display.current" = "Current Screen (under cursor)";
+"menu.permission.status.granted" = "Screen Recording: Granted";
+"menu.permission.status.denied" = "Screen Recording: Not Granted";
+"menu.permission" = "Screen Recording Permission…";
+"menu.settings" = "Settings…";
+"menu.about" = "About Slimshot";
+"menu.quit" = "Quit Slimshot";
+
+"settings.title" = "Slimshot Settings";
+"settings.capture" = "After Capture";
+"settings.copy" = "Copy to clipboard";
+"settings.auto_save" = "Save to file automatically";
+"settings.thumbnail" = "Show floating thumbnail";
+"settings.output" = "Output";
+"settings.format" = "Format:";
+"settings.folder" = "Save folder: %@";
+"settings.choose" = "Choose…";
+"settings.open_config" = "Open Config Folder";
+"settings.permission" = "Screen Recording Permission…";
+"settings.close" = "Close";
+
+"alert.permission.title" = "Screen Recording Permission Required";
+"alert.permission.body" = "Slimshot needs Screen Recording permission to capture your screen. Open System Settings → Privacy & Security → Screen & System Audio Recording, enable Slimshot, then relaunch the app.";
+"alert.permission.open" = "Open System Settings";
+"alert.permission.request" = "Request Permission";
+"alert.permission.later" = "Later";
+"alert.permission.granted.title" = "Screen Recording Permission";
+"alert.permission.granted.body" = "Screen Recording permission is granted.";
+"alert.capture.title" = "Capture";
+"alert.capture.body" = "%@ will be implemented in M1. M0 only validates the menu bar, configuration, and permission flow.";
+"alert.save_failed.title" = "Could Not Save Configuration";
+"alert.ok" = "OK";
+
+"alert.capture_failed.title" = "Capture Failed";
+"alert.output_failed.title" = "Could Not Save Screenshot";
+"overlay.capture" = "✓ Capture";
+"overlay.cancel" = "× Cancel";
+"overlay.hint.region" = "Drag to select · Click a window to capture · Esc to cancel";
+"overlay.hint.window" = "Click a window to capture · Esc to cancel";
+
+"capture.error.no_screen" = "No screen under the mouse cursor.";
+"capture.error.display_not_found" = "Could not find the display to capture.";
+"capture.error.invalid_display_size" = "The display reported an invalid size.";
+"capture.error.start_display_failed" = "Could not capture the starting display.";
+"capture.error.no_displays" = "No displays available to capture.";
+"capture.error.region_overlay_failed" = "Could not create the region selection overlay.";
+"capture.error.invalid_window_size" = "The window reported an invalid size.";
+"capture.error.window_overlay_failed" = "Could not create the window selection overlay.";
+"capture.error.unknown" = "Unknown capture error.";
+
+"output.error.save_directory" = "Could not resolve the save directory.";
+"output.error.create_directory" = "Could not create %s: %s";
+"output.error.filename" = "Could not format the filename.";
+"output.error.path_too_long" = "The output path is too long.";
+"output.error.unique_filename" = "Could not find a unique filename.";
+"output.error.create_output_directory" = "Could not create the output directory: %s";
+"output.error.invalid_path" = "The output path is not valid UTF-8.";
+"output.error.imageio_destination" = "ImageIO could not create the destination.";
+"output.error.encode" = "Could not encode the screenshot.";

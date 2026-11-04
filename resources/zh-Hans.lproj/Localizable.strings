@@ -1,0 +1,63 @@
+"menu.capture.full" = "全屏截图";
+"menu.capture.window" = "窗口截图";
+"menu.capture.region" = "区域截图";
+"menu.display" = "截图显示器";
+"menu.display.current" = "当前屏幕（跟随光标）";
+"menu.permission.status.granted" = "屏幕录制：已授权";
+"menu.permission.status.denied" = "屏幕录制：未授权";
+"menu.permission" = "屏幕录制权限…";
+"menu.settings" = "设置…";
+"menu.about" = "关于 Slimshot";
+"menu.quit" = "退出 Slimshot";
+
+"settings.title" = "Slimshot 设置";
+"settings.capture" = "截图后";
+"settings.copy" = "复制到剪贴板";
+"settings.auto_save" = "自动保存文件";
+"settings.thumbnail" = "显示浮动缩略图";
+"settings.output" = "输出";
+"settings.format" = "格式：";
+"settings.folder" = "保存目录：%@";
+"settings.choose" = "选择…";
+"settings.open_config" = "打开配置目录";
+"settings.permission" = "屏幕录制权限…";
+"settings.close" = "关闭";
+
+"alert.permission.title" = "需要屏幕录制权限";
+"alert.permission.body" = "Slimshot 需要屏幕录制权限才能截图。请前往“系统设置 → 隐私与安全性 → 屏幕与系统音频录制”启用 Slimshot，然后重新启动应用。";
+"alert.permission.open" = "打开系统设置";
+"alert.permission.request" = "请求权限";
+"alert.permission.later" = "稍后";
+"alert.permission.granted.title" = "屏幕录制权限";
+"alert.permission.granted.body" = "屏幕录制权限已授权。";
+"alert.capture.title" = "截图";
+"alert.capture.body" = "%@ 将在 M1 实现。M0 只验证菜单栏、配置和权限流程。";
+"alert.save_failed.title" = "无法保存配置";
+"alert.ok" = "好";
+
+"alert.capture_failed.title" = "截图失败";
+"alert.output_failed.title" = "无法保存截图";
+"overlay.capture" = "✓ 截图";
+"overlay.cancel" = "× 取消";
+"overlay.hint.region" = "拖动框选 · 点击窗口直接截图 · Esc 取消";
+"overlay.hint.window" = "点击窗口截图 · Esc 取消";
+
+"capture.error.no_screen" = "鼠标所在位置没有屏幕。";
+"capture.error.display_not_found" = "找不到要截图的显示器。";
+"capture.error.invalid_display_size" = "显示器返回了无效的尺寸。";
+"capture.error.start_display_failed" = "无法捕获起始显示器。";
+"capture.error.no_displays" = "没有可捕获的显示器。";
+"capture.error.region_overlay_failed" = "无法创建区域选择覆盖层。";
+"capture.error.invalid_window_size" = "窗口返回了无效的尺寸。";
+"capture.error.window_overlay_failed" = "无法创建窗口选择覆盖层。";
+"capture.error.unknown" = "未知的截图错误。";
+
+"output.error.save_directory" = "无法解析保存目录。";
+"output.error.create_directory" = "无法创建 %s：%s";
+"output.error.filename" = "无法生成文件名。";
+"output.error.path_too_long" = "输出路径过长。";
+"output.error.unique_filename" = "无法生成不重复的文件名。";
+"output.error.create_output_directory" = "无法创建输出目录：%s";
+"output.error.invalid_path" = "输出路径不是有效的 UTF-8。";
+"output.error.imageio_destination" = "ImageIO 无法创建输出目标。";
+"output.error.encode" = "无法编码截图。";

@@ -1,0 +1,13 @@
+build/
+dist/
+*.o
+*.d
+.DS_Store
+*.pem
+*.p12
+*.key
+*.cer
+*.mobileprovision
+
+# clang static analyzer reports
+/*.plist
