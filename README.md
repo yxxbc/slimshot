@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="resources/icon/Slimshot-256.png" width="128" alt="Slimshot">
+</p>
+
 # Slimshot
 
 轻量级 macOS 菜单栏截图工具。核心用 C，ScreenCaptureKit / AppKit 放在一层很薄的 Objective-C 桥接里。
@@ -141,7 +145,7 @@ zip 内包含 `Slimshot.app`、`install.command`、`LICENSE` 和本 README。解
 src/core/        C 核心：配置、命名、路径、日志
 src/bridge/      ObjC 桥接：菜单栏、设置、SCK 截图、框选层、输出、缩略图
 src/vendor/      cJSON 1.7.18（MIT）
-resources/       Info.plist 和中英文 strings
+resources/       Info.plist、中英文 strings、icon（PNG + icns）
 tests/           配置、命名测试
 scripts/         构建、签名、证书、打包、安装
 docs/            设计笔记：跨屏覆盖层与坐标系

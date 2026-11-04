@@ -19,6 +19,7 @@
 #include "log.h"
 #include "permissions.h"
 #include "settings.h"
+#include "status_icon.h"
 
 @implementation AppDelegate {
     slim_config_t _config;
@@ -126,11 +127,10 @@
 - (void)setupStatusItem {
     _statusItem = [[NSStatusBar systemStatusBar]
         statusItemWithLength:NSVariableStatusItemLength];
-    NSImage *icon = [NSImage imageWithSystemSymbolName:@"camera.viewfinder"
-                              accessibilityDescription:@"Slimshot"];
+    NSImage *icon = SlimStatusIconCreate();
     if (icon != nil) {
-        icon.template = YES;
         _statusItem.button.image = icon;
+        _statusItem.button.imagePosition = NSImageOnly;
     } else {
         _statusItem.button.title = @"Slimshot";
     }

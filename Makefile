@@ -36,6 +36,7 @@ M_SRCS := \
 	src/bridge/permissions.m \
 	src/bridge/screen_geometry.m \
 	src/bridge/settings.m \
+	src/bridge/status_icon.m \
 	src/bridge/thumbnail.m
 
 VENDOR_SRCS := src/vendor/cjson/cJSON.c
@@ -82,11 +83,13 @@ $(MACOS_DIR)/$(APP_NAME): $(OBJS)
 	$(CC) $(OBJS) -o $@ $(LDFLAGS)
 
 $(APP_BUNDLE): $(MACOS_DIR)/$(APP_NAME) resources/Info.plist \
+		resources/icon/Slimshot.icns \
 		resources/en.lproj/Localizable.strings \
 		resources/zh-Hans.lproj/Localizable.strings \
 		scripts/sign.sh
 	@mkdir -p $(RESOURCES_DIR)/en.lproj $(RESOURCES_DIR)/zh-Hans.lproj
 	cp resources/Info.plist $(CONTENTS_DIR)/Info.plist
+	cp resources/icon/Slimshot.icns $(RESOURCES_DIR)/Slimshot.icns
 	cp resources/en.lproj/Localizable.strings $(RESOURCES_DIR)/en.lproj/
 	cp resources/zh-Hans.lproj/Localizable.strings $(RESOURCES_DIR)/zh-Hans.lproj/
 	printf 'APPL????' > $(CONTENTS_DIR)/PkgInfo
