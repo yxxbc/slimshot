@@ -585,6 +585,7 @@ static CGFloat SlimTopSafeInset(NSView *view) {
 }
 
 - (NSCursor *)cursorForDragMode:(SlimDragMode)mode {
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 150000
     if (@available(macOS 15.0, *)) {
         NSCursorFrameResizePosition position =
             NSCursorFrameResizePositionTop;
@@ -623,6 +624,7 @@ static CGFloat SlimTopSafeInset(NSView *view) {
         return [NSCursor frameResizeCursorFromPosition:position
                                            inDirections:NSCursorFrameResizeDirectionsAll];
     }
+#endif
 
     switch (mode) {
         case SlimDragModeLeft:
