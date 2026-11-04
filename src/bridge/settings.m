@@ -7,6 +7,7 @@
 
 #import <Cocoa/Cocoa.h>
 
+#include <math.h>
 #include <stdio.h>
 
 #include "config.h"
@@ -16,17 +17,24 @@
 
 @implementation SettingsWindowController {
     slim_config_t *_config;
+    NSButton *_includeCursorCheck;
     NSButton *_copyCheck;
     NSButton *_autoSaveCheck;
     NSButton *_thumbnailCheck;
+    NSStepper *_thumbnailStepper;
+    NSTextField *_thumbnailSecondsLabel;
     NSPopUpButton *_formatPopup;
+    NSSlider *_jpegSlider;
+    NSTextField *_jpegValueLabel;
+    NSSlider *_heicSlider;
+    NSTextField *_heicValueLabel;
     NSTextField *_folderLabel;
     NSTextField *_permissionStatusLabel;
 }
 
 - (instancetype)initWithConfig:(slim_config_t *)config {
     NSWindow *window = [[NSWindow alloc]
-        initWithContentRect:NSMakeRect(0, 0, 520, 500)
+        initWithContentRect:NSMakeRect(0, 0, 520, 540)
                   styleMask:(NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
                              NSWindowStyleMaskMiniaturizable)
                     backing:NSBackingStoreBuffered
@@ -67,6 +75,18 @@
     return row;
 }
 
+- (NSStackView *)qualityRowWithTitle:(NSString *)title
+                              slider:(NSSlider *)slider
+                          valueLabel:(NSTextField *)valueLabel {
+    NSTextField *label = [NSTextField labelWithString:title];
+    [label.widthAnchor constraintEqualToConstant:90.0].active = YES;
+    NSStackView *row = [NSStackView stackViewWithViews:@[ label, slider, valueLabel ]];
+    row.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    row.alignment = NSLayoutAttributeCenterY;
+    row.spacing = 8.0;
+    return row;
+}
+
 - (void)buildUI {
     NSView *content = self.window.contentView;
     NSStackView *stack = [NSStackView stackViewWithViews:@[]];
@@ -82,6 +102,18 @@
         [stack.topAnchor constraintEqualToAnchor:content.topAnchor constant:20.0],
         [stack.bottomAnchor constraintLessThanOrEqualToAnchor:content.bottomAnchor constant:-20.0],
     ]];
+
+    [stack addArrangedSubview:[self sectionLabel:NSLocalizedString(@"settings.capture_options", nil)]];
+
+    _includeCursorCheck = [NSButton checkboxWithTitle:NSLocalizedString(@"settings.include_cursor", nil)
+                                               target:self
+                                               action:@selector(toggleIncludeCursor:)];
+    [stack addArrangedSubview:_includeCursorCheck];
+
+    NSBox *captureSeparator = [[NSBox alloc] init];
+    captureSeparator.boxType = NSBoxSeparator;
+    [stack addArrangedSubview:captureSeparator];
+    [captureSeparator.widthAnchor constraintEqualToAnchor:stack.widthAnchor].active = YES;
 
     [stack addArrangedSubview:[self sectionLabel:NSLocalizedString(@"settings.capture", nil)]];
 
@@ -100,6 +132,21 @@
                                            action:@selector(toggleThumbnail:)];
     [stack addArrangedSubview:_thumbnailCheck];
 
+    _thumbnailSecondsLabel = [NSTextField labelWithString:@""];
+    _thumbnailStepper = [[NSStepper alloc] init];
+    _thumbnailStepper.minValue = 0;
+    _thumbnailStepper.maxValue = 60;
+    _thumbnailStepper.increment = 1;
+    _thumbnailStepper.target = self;
+    _thumbnailStepper.action = @selector(thumbnailSecondsChanged:);
+    NSStackView *secondsRow =
+        [NSStackView stackViewWithViews:@[ _thumbnailSecondsLabel, _thumbnailStepper ]];
+    secondsRow.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    secondsRow.alignment = NSLayoutAttributeCenterY;
+    secondsRow.spacing = 8.0;
+    secondsRow.edgeInsets = NSEdgeInsetsMake(0.0, 20.0, 0.0, 0.0);
+    [stack addArrangedSubview:secondsRow];
+
     NSBox *separator = [[NSBox alloc] init];
     separator.boxType = NSBoxSeparator;
     [stack addArrangedSubview:separator];
@@ -113,6 +160,34 @@
     _formatPopup.action = @selector(formatChanged:);
     [stack addArrangedSubview:[self rowWithLabel:NSLocalizedString(@"settings.format", nil)
                                          control:_formatPopup]];
+
+    _jpegSlider = [NSSlider sliderWithValue:_config->jpeg_quality
+                                   minValue:1.0
+                                   maxValue:100.0
+                                     target:self
+                                     action:@selector(jpegQualityChanged:)];
+    _jpegSlider.continuous = NO;
+    [_jpegSlider.widthAnchor constraintEqualToConstant:180.0].active = YES;
+    _jpegValueLabel = [NSTextField labelWithString:@""];
+    _jpegValueLabel.alignment = NSTextAlignmentRight;
+    [_jpegValueLabel.widthAnchor constraintEqualToConstant:32.0].active = YES;
+    [stack addArrangedSubview:[self qualityRowWithTitle:NSLocalizedString(@"settings.quality.jpeg", nil)
+                                                slider:_jpegSlider
+                                            valueLabel:_jpegValueLabel]];
+
+    _heicSlider = [NSSlider sliderWithValue:_config->heic_quality
+                                   minValue:1.0
+                                   maxValue:100.0
+                                     target:self
+                                     action:@selector(heicQualityChanged:)];
+    _heicSlider.continuous = NO;
+    [_heicSlider.widthAnchor constraintEqualToConstant:180.0].active = YES;
+    _heicValueLabel = [NSTextField labelWithString:@""];
+    _heicValueLabel.alignment = NSTextAlignmentRight;
+    [_heicValueLabel.widthAnchor constraintEqualToConstant:32.0].active = YES;
+    [stack addArrangedSubview:[self qualityRowWithTitle:NSLocalizedString(@"settings.quality.heic", nil)
+                                                slider:_heicSlider
+                                            valueLabel:_heicValueLabel]];
 
     _folderLabel = [NSTextField labelWithString:@""];
     _folderLabel.lineBreakMode = NSLineBreakByTruncatingMiddle;
@@ -182,11 +257,20 @@
 }
 
 - (void)refreshControls {
+    _includeCursorCheck.state =
+        _config->include_cursor ? NSControlStateValueOn : NSControlStateValueOff;
     _copyCheck.state =
         _config->copy_to_clipboard ? NSControlStateValueOn : NSControlStateValueOff;
     _autoSaveCheck.state = _config->auto_save ? NSControlStateValueOn : NSControlStateValueOff;
     _thumbnailCheck.state =
         _config->show_thumbnail ? NSControlStateValueOn : NSControlStateValueOff;
+
+    _thumbnailStepper.integerValue = _config->thumbnail_seconds;
+    [self updateThumbnailSecondsLabel];
+
+    _jpegSlider.doubleValue = _config->jpeg_quality;
+    _heicSlider.doubleValue = _config->heic_quality;
+    [self updateQualityLabels];
 
     NSArray<NSString *> *values = @[ @"png", @"jpeg", @"heic", @"tiff" ];
     NSString *format = [NSString stringWithUTF8String:_config->format];
@@ -195,6 +279,16 @@
 
     [self updateFolderLabel];
     [self refreshPermissionStatus];
+}
+
+- (void)updateThumbnailSecondsLabel {
+    _thumbnailSecondsLabel.stringValue = [NSString stringWithFormat:
+        NSLocalizedString(@"settings.thumbnail_seconds", nil), _config->thumbnail_seconds];
+}
+
+- (void)updateQualityLabels {
+    _jpegValueLabel.stringValue = [NSString stringWithFormat:@"%d", _config->jpeg_quality];
+    _heicValueLabel.stringValue = [NSString stringWithFormat:@"%d", _config->heic_quality];
 }
 
 - (void)refreshPermissionStatus {
@@ -233,6 +327,29 @@
         [alert addButtonWithTitle:NSLocalizedString(@"alert.ok", nil)];
         [alert runModal];
     }
+}
+
+- (void)toggleIncludeCursor:(NSButton *)sender {
+    _config->include_cursor = (sender.state == NSControlStateValueOn) ? 1 : 0;
+    [self saveConfig];
+}
+
+- (void)thumbnailSecondsChanged:(NSStepper *)sender {
+    _config->thumbnail_seconds = (int)sender.integerValue;
+    [self updateThumbnailSecondsLabel];
+    [self saveConfig];
+}
+
+- (void)jpegQualityChanged:(NSSlider *)sender {
+    _config->jpeg_quality = (int)lround(sender.doubleValue);
+    [self updateQualityLabels];
+    [self saveConfig];
+}
+
+- (void)heicQualityChanged:(NSSlider *)sender {
+    _config->heic_quality = (int)lround(sender.doubleValue);
+    [self updateQualityLabels];
+    [self saveConfig];
 }
 
 - (void)toggleCopy:(NSButton *)sender {

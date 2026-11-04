@@ -11,12 +11,17 @@
 "menu.quit" = "Quit Slimshot";
 
 "settings.title" = "Slimshot Settings";
+"settings.capture_options" = "Capture";
+"settings.include_cursor" = "Include mouse cursor";
 "settings.capture" = "After Capture";
 "settings.copy" = "Copy to clipboard";
 "settings.auto_save" = "Save to file automatically";
 "settings.thumbnail" = "Show floating thumbnail";
+"settings.thumbnail_seconds" = "Thumbnail duration: %d s (0 = keep open)";
 "settings.output" = "Output";
 "settings.format" = "Format:";
+"settings.quality.jpeg" = "JPEG quality";
+"settings.quality.heic" = "HEIC quality";
 "settings.folder" = "Save folder: %@";
 "settings.choose" = "Choose…";
 "settings.open_config" = "Open Config Folder";

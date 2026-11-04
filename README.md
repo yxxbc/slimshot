@@ -6,7 +6,7 @@
 
 轻量级 macOS 菜单栏截图工具。核心用 C，ScreenCaptureKit / AppKit 放在一层很薄的 Objective-C 桥接里。
 
-> 当前状态：**M1 + 全局热键 + 跨屏区域截图**。全屏 / 窗口 / 区域截图、冻结框选、剪贴板、自动保存、浮动缩略图已接入。完整设置窗口仍在 M2。
+> 当前状态：**M1 + 全局热键 + 跨屏区域截图**。全屏 / 窗口 / 区域截图、冻结框选、剪贴板、自动保存、浮动缩略图已接入。设置窗口已支持权限、格式、JPEG/HEIC 质量、缩略图时长和鼠标指针；插件系统仍在 M3。
 
 ## 环境要求
 
@@ -81,7 +81,8 @@ M1 实测（arm64）：bundle 约 264 KB，zip 约 96 KB，空闲 `phys_footprin
 - 自动保存到 `~/Pictures/Screenshots`，时间戳命名
 - 右下角浮动缩略图：可拖动，点击打开保存的文件，默认 3 秒后消失
 - 格式：PNG / JPEG / HEIC / TIFF
-- 目录、命名模板、质量、格式在 `config.json` 中配置
+- 格式、JPEG/HEIC 质量、缩略图时长、是否包含指针可在设置窗口修改
+- 目录、命名模板在 `config.json` 中配置
 
 配置路径：`~/Library/Application Support/Slimshot/config.json`
 日志路径：`~/Library/Logs/Slimshot.log`
