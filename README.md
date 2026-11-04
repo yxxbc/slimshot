@@ -6,7 +6,7 @@
 
 轻量级 macOS 菜单栏截图工具。核心用 C，ScreenCaptureKit / AppKit 放在一层很薄的 Objective-C 桥接里。
 
-> 当前状态：**M1 + 全局热键 + 跨屏区域截图 + M3 插件宿主/OCR**。全屏 / 窗口 / 区域截图、冻结框选、剪贴板、自动保存、浮动缩略图已接入。设置窗口采用侧边栏布局，包含通用、截图、输出、热键、插件；插件菜单已接入 OCR。
+> 当前状态：**M1 + 全局热键 + 跨屏区域截图 + M3 插件宿主/OCR/编辑器**。全屏 / 窗口 / 区域截图、冻结框选、剪贴板、自动保存、浮动缩略图已接入。设置窗口采用侧边栏布局，包含通用、截图、输出、热键、插件；插件菜单已接入 OCR 和矩形标注编辑器。
 
 ## 环境要求
 
@@ -89,9 +89,10 @@ M1 实测（arm64）：bundle 约 264 KB，zip 约 96 KB，空闲 `phys_footprin
 
 菜单栏 →「插件」：对最近一次截图运行插件。没有截图时 `post-process` 插件置灰。
 
-- 区域框选后的操作条会直接显示 OCR 按钮，点一下完成截图并立即识别
+- 区域框选后的操作条会直接显示插件入口，点一下完成截图并立即运行
 - 全屏/窗口截图后的浮动缩略图底部也有插件按钮，不用再进菜单
 - 内置 **OCR**：使用 Vision 识别中英文，结果自动复制到剪贴板并提示字符数
+- 内置 **Editor**：在独立窗口里拖拽画红框，保存并复制编辑后的图片
 - 用户插件目录：`~/Library/Application Support/Slimshot/Plugins/<id>/`
 - 每个插件是一个可执行文件 + `manifest.json`，通过 stdin/stdout 的 JSON 通信
 
@@ -168,6 +169,7 @@ zip 内包含 `Slimshot.app`、`install.command`、`LICENSE` 和本 README。解
 src/core/        C 核心：配置、命名、路径、日志、插件发现与进程调度
 src/bridge/      ObjC 桥接：菜单栏、设置、SCK 截图、框选层、输出、缩略图、插件菜单
 src/plugins/ocr/ OCR 参考插件（Vision）
+src/plugins/editor/ 矩形标注编辑器（独立 UI 插件）
 src/vendor/      cJSON 1.7.18（MIT）
 resources/       Info.plist、中英文 strings、icon（PNG + icns）
 tests/           配置、命名、插件测试
@@ -185,7 +187,7 @@ docs/            设计笔记：覆盖层坐标系、界面布局、插件协议
 
 - M1：全屏 / 窗口 / 区域冻结框选、窗口高亮、剪贴板、保存、缩略图
 - M2：侧边栏设置窗口、配置读写、格式/质量/路径、热键概览
-- M3：插件宿主 + JSON 协议 + OCR 参考插件
+- M3：插件宿主 + JSON 协议 + OCR 参考插件 + 矩形标注编辑器
 - M4：Sparkle 2、appcast、downvid 式更新脚本、GitHub Actions 发布
 
 ## 许可证

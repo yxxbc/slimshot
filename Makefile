@@ -90,25 +90,37 @@ OCR_BIN := $(BUILD_DIR)/plugins/ocr/ocr
 OCR_SRC := src/plugins/ocr/main.m
 OCR_MANIFEST := src/plugins/ocr/manifest.json
 
+EDITOR_BIN := $(BUILD_DIR)/plugins/editor/editor
+EDITOR_SRC := src/plugins/editor/main.m
+EDITOR_MANIFEST := src/plugins/editor/manifest.json
+
 $(OCR_BIN): $(OCR_SRC)
 	@mkdir -p $(dir $@)
 	$(CC) $(OBJCFLAGS) $(OCR_SRC) -o $@ \
 		-framework Foundation -framework Vision -framework ImageIO -framework CoreGraphics
 
+$(EDITOR_BIN): $(EDITOR_SRC)
+	@mkdir -p $(dir $@)
+	$(CC) $(OBJCFLAGS) $(EDITOR_SRC) -o $@ \
+		-framework Cocoa -framework ImageIO -framework CoreGraphics
+
 $(APP_BUNDLE): $(MACOS_DIR)/$(APP_NAME) resources/Info.plist \
 		resources/icon/Slimshot.icns \
 		LICENSE \
 		$(OCR_BIN) $(OCR_MANIFEST) \
+		$(EDITOR_BIN) $(EDITOR_MANIFEST) \
 		resources/en.lproj/Localizable.strings \
 		resources/zh-Hans.lproj/Localizable.strings \
 		scripts/sign.sh
 	@mkdir -p $(RESOURCES_DIR)/en.lproj $(RESOURCES_DIR)/zh-Hans.lproj
-	@mkdir -p $(RESOURCES_DIR)/Plugins/ocr
+	@mkdir -p $(RESOURCES_DIR)/Plugins/ocr $(RESOURCES_DIR)/Plugins/editor
 	cp resources/Info.plist $(CONTENTS_DIR)/Info.plist
 	cp resources/icon/Slimshot.icns $(RESOURCES_DIR)/Slimshot.icns
 	cp LICENSE $(RESOURCES_DIR)/LICENSE
 	cp $(OCR_BIN) $(RESOURCES_DIR)/Plugins/ocr/ocr
 	cp $(OCR_MANIFEST) $(RESOURCES_DIR)/Plugins/ocr/manifest.json
+	cp $(EDITOR_BIN) $(RESOURCES_DIR)/Plugins/editor/editor
+	cp $(EDITOR_MANIFEST) $(RESOURCES_DIR)/Plugins/editor/manifest.json
 	cp resources/en.lproj/Localizable.strings $(RESOURCES_DIR)/en.lproj/
 	cp resources/zh-Hans.lproj/Localizable.strings $(RESOURCES_DIR)/zh-Hans.lproj/
 	printf 'APPL????' > $(CONTENTS_DIR)/PkgInfo

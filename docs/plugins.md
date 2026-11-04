@@ -31,7 +31,7 @@ Slimshot 的插件是**独立进程**：主程序把请求 JSON 写到 stdin，�
 | `version` | 插件版本，可省略，默认 `0.0.0` |
 | `type` | `post-process` 或 `standalone` |
 | `exec` | 相对插件目录的可执行文件路径；不允许绝对路径或 `..` |
-| `timeout_ms` | 1000–60000，默认 15000 |
+| `timeout_ms` | 1000–600000，默认 15000；带 UI 的编辑器可设 600000 |
 
 发现阶段会检查 `exec` 存在且可执行；非法清单会跳过并写日志。
 
@@ -86,18 +86,32 @@ Slimshot 的插件是**独立进程**：主程序把请求 JSON 写到 stdin，�
 - 菜单栏「插件」子菜单在打开时重新扫描目录。
 - `post-process` 插件在没有截图时置灰；`standalone` 插件随时可运行。
 - 主程序最多读取 8 MB stdout、512 KB stderr；超时后杀掉整个进程组。
+- 带 UI 的插件（如 Editor）会打开自己的窗口；主程序在后台等待它的 JSON，超时上限 10 分钟。
 - 插件不签名、不沙箱；插件是用户主动安装的可执行代码。只运行你信任的插件。
 - 当前没有启用/禁用开关、没有插件参数 UI、没有 standalone 参考插件；这些留给后续迭代。
 
-## OCR 参考插件
+## 参考插件
+
+### OCR
 
 `src/plugins/ocr/` 使用 Vision：
 
 - 读取 `image_path`，用 `VNRecognizeTextRequest` 做准确识别，语言 `zh-Hans` + `en-US`。
-- 按自上而下、从左到右排序后拼接文本。
+- 按 XY-cut 的阅读顺序（先分栏、再分块、最后从上到下）拼接文本。
 - 把文本放进 `clipboard_text`，主程序复制到剪贴板并提示字符数。
 
 构建时会编译到 `Slimshot.app/Contents/Resources/Plugins/ocr/`。
+
+### Editor
+
+`src/plugins/editor/` 是一个带 UI 的 `post-process` 插件：
+
+- 打开独立 AppKit 窗口，拖拽绘制红色矩形标注；支持撤销。
+- 「保存并复制」把标注后的 PNG 写入 `output_dir`，同时复制 PNG/TIFF 到剪贴板，再返回 `output_path` 和结果 JSON。
+- `timeout_ms` 设为 600000，允许用户慢慢编辑；关闭窗口视为取消。
+- 目前只有矩形工具，没有箭头、文字、马赛克；这些留给后续迭代。
+
+构建时会编译到 `Slimshot.app/Contents/Resources/Plugins/editor/`。
 
 ## 测试
 

@@ -160,8 +160,8 @@ static int load_manifest(const char *plugin_dir, const char *manifest_path,
                     if (timeout_ms < 1000) {
                         timeout_ms = 1000;
                     }
-                    if (timeout_ms > 60000) {
-                        timeout_ms = 60000;
+                    if (timeout_ms > 600000) {
+                        timeout_ms = 600000;
                     }
                 }
                 plugin.timeout_ms = timeout_ms;

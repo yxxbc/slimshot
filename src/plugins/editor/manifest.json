@@ -1,0 +1,8 @@
+{
+  "id": "editor",
+  "name": "Editor",
+  "version": "0.1.0",
+  "type": "post-process",
+  "exec": "editor",
+  "timeout_ms": 600000
+}
