@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
 APP_NAME := Slimshot
-VERSION ?= 0.2.0
+VERSION ?= 0.2.1
 BUILD_NUMBER ?= 1
 # Universal by default so a local build runs on Apple silicon and Intel Macs
 # alike. Pass ARCHS="" to build for the host architecture only.

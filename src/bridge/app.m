@@ -552,19 +552,58 @@
         slim_log("sparkle disabled: missing feed URL or public key");
         return;
     }
+
     _updaterController = [[SPUStandardUpdaterController alloc]
-        initWithStartingUpdater:YES
+        initWithStartingUpdater:NO
                updaterDelegate:nil
             userDriverDelegate:nil];
-    slim_log("sparkle updater started");
+    [_updaterController startUpdater];
+    slim_log("sparkle updater started (automatic checks: %s)",
+             [_updaterController.updater automaticallyChecksForUpdates] ? "on" : "off");
+}
+
+/* A pure menu bar app is an accessory: it never takes over the Dock and is
+ * rarely frontmost. Sparkle's windows are ordinary windows, so they open behind
+ * the active app and the user sees nothing. Switch to a regular activation
+ * policy while update UI is on screen, then go back to accessory so the Dock
+ * icon and app menu do not linger. */
+- (void)presentUpdaterWindow {
+    [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+    [NSApp activateIgnoringOtherApps:YES];
+    [self performSelector:@selector(restoreAccessoryPolicy)
+               withObject:nil
+               afterDelay:1.0];
+}
+
+- (void)restoreAccessoryPolicy {
+    if (self.hasVisibleUpdateUI) {
+        return;
+    }
+    [NSApp setActivationPolicy:NSApplicationActivationPolicyAccessory];
+}
+
+- (BOOL)hasVisibleUpdateUI {
+#if HAVE_SPARKLE
+    for (NSWindow *window in [NSApp windows]) {
+        if (window.isVisible && window.level >= NSNormalWindowLevel) {
+            return YES;
+        }
+    }
+#endif
+    return NO;
 }
 #endif
 
 - (void)checkForUpdates:(id)sender {
 #if HAVE_SPARKLE
-    if (_updaterController != nil) {
-        [_updaterController checkForUpdates:sender];
+    if (_updaterController == nil) {
+        return;
     }
+
+    /* Without this the click looks like it does nothing: the app cannot come
+     * forward as an accessory, so Sparkle's window would stay behind. */
+    [self presentUpdaterWindow];
+    [_updaterController checkForUpdates:sender];
 #else
     (void)sender;
 #endif

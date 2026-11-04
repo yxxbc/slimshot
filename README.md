@@ -172,8 +172,8 @@ make dist
 
 产物：
 
-- `dist/Slimshot-0.2.0.zip`：用户安装包（app + `install.command` + LICENSE + README）
-- `dist/Slimshot-0.2.0-update.zip`：Sparkle 更新包（`Slimshot.app` 在 zip 根目录）
+- `dist/Slimshot-0.2.1.zip`：用户安装包（app + `install.command` + LICENSE + README）
+- `dist/Slimshot-0.2.1-update.zip`：Sparkle 更新包（`Slimshot.app` 在 zip 根目录）
 - 两个 `.sha256`
 
 用户安装包解压后双击 `install.command`，脚本会：
