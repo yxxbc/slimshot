@@ -8,6 +8,8 @@ dist/
 *.key
 *.cer
 *.mobileprovision
+vendor/sparkle/
+sparkle-private-key*
 
 # clang static analyzer reports
 /*.plist

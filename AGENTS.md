@@ -25,7 +25,7 @@
 
 Slimshot 是一个常驻菜单栏的轻量 macOS 截图工具。C 核心 + 很薄的 Objective-C 桥接，不引入 Swift、不加重量级框架。
 
-当前状态：**M1 完成**（全屏 / 窗口 / 区域冻结框选、窗口高亮、剪贴板、保存、浮动缩略图；Carbon 热键已在 M2 提前接入）。设置窗口仍在演进。
+当前状态：**M1-M4 主体完成**（全屏 / 窗口 / 区域冻结框选、侧边栏设置、插件宿主/OCR/编辑器、Sparkle 更新与 GitHub Actions 发布）。新增功能优先走插件，不要继续膨胀主程序。
 
 三条不可妥协的约束，任何改动都要同时满足：
 
@@ -36,12 +36,13 @@ Slimshot 是一个常驻菜单栏的轻量 macOS 截图工具。C 核心 + 很�
 ## 2. 构建与验证
 
 ```bash
+make sparkle    # 拉取 Sparkle 2.7.1 到 vendor/sparkle（更新功能）
 make            # 生成 build/Slimshot.app
 make run        # 通过 LaunchServices 启动
 make debug      # 前台运行，日志打到终端
-make test       # 配置读写 + 命名模板测试
+make test       # 配置、命名、插件发现/运行/超时测试
 make clean
-make dist       # dist/Slimshot-<version>.zip + .sha256
+make dist       # 用户安装包 + Sparkle 更新包 + .sha256
 make logs       # tail -f ~/Library/Logs/Slimshot.log
 ```
 
@@ -65,13 +66,18 @@ vmmap -summary <pid>
 ## 3. 目录与职责
 
 ```text
-src/core/      纯 C，不含 AppKit：config / naming / paths / log
-src/bridge/     Objective-C：app（菜单栏）、capture（SCK）、overlay（框选层）、
-                output（编码落盘）、thumbnail、settings、hotkeys、permissions
+.github/        GitHub Actions release workflow
+src/core/       纯 C，不含 AppKit：config / naming / paths / log / plugin
+src/bridge/     Objective-C：app、capture、overlay、output、thumbnail、settings、
+                hotkeys、permissions、plugins
+src/plugins/    OCR / Editor 参考插件（独立可执行文件）
 src/vendor/     第三方：cJSON 1.7.18（MIT）
-resources/      Info.plist、en.lproj / zh-Hans.lproj 的 Localizable.strings
+vendor/         Sparkle 由 make sparkle 拉取，gitignore
+resources/      Info.plist、en.lproj / zh-Hans.lproj 的 Localizable.strings、icon
 tests/          纯 C 单元测试，由 Makefile 直接编译
-scripts/        build / sign / package / create-dev-cert / install.command
+scripts/        build / sign / package / create-dev-cert / install.command /
+                fetch-sparkle / generate-appcast / sparkle-setup
+docs/           设计笔记（覆盖层、界面布局、插件、发布）
 ```
 
 分层规则：
@@ -168,8 +174,8 @@ CODESIGN_KEYCHAIN="$HOME/Library/Keychains/slimshot-dev.keychain-db" \
 make
 ```
 
-- 私钥、Sparkle EdDSA 私钥只放 GitHub Actions Secrets，**永远不进仓库**（`.gitignore` 已挡 `*.pem *.p12 *.key *.cer *.mobileprovision`）。
-- 发布流程复刻 downvid：`ditto -c -k` 打包、SHA-256 校验、独立脚本等待退出 → 备份 → 替换 → `xattr -dr com.apple.quarantine` → 重签 → 失败回滚。改这段脚本要同时验证成功和回滚两条路径。
+- 私钥、Sparkle EdDSA 私钥只放 GitHub Actions Secrets，**永远不进仓库**（`.gitignore` 已挡 `*.pem *.p12 *.key *.cer *.mobileprovision` 和 `sparkle-private-key*`）。
+- 发布流程：GitHub Actions（`.github/workflows/release.yml`）构建 universal、签名、生成用户安装包/更新包和 EdDSA appcast；应用内更新由 Sparkle 2 负责。完整步骤见 [`docs/release.md`](docs/release.md)。
 
 ## 7. 测试
 

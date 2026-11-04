@@ -10,6 +10,7 @@
 "menu.permission.status.denied" = "Screen Recording: Not Granted";
 "menu.permission" = "Screen Recording Permission…";
 "menu.settings" = "Settings…";
+"menu.check_updates" = "Check for Updates…";
 "menu.about" = "About Slimshot";
 "menu.quit" = "Quit Slimshot";
 

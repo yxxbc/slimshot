@@ -1,0 +1,111 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: meta
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          if [ -z "$VERSION" ] || [ "$VERSION" = "$TAG" ]; then
+            echo "::error::Release tags must look like v1.2.3" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Using version $VERSION, build $GITHUB_RUN_NUMBER"
+
+      - name: Check update configuration
+        env:
+          PUBLIC_KEY: ${{ vars.SPARKLE_PUBLIC_KEY }}
+          PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          if [ -z "$PUBLIC_KEY" ]; then
+            echo "::error::Set repository variable SPARKLE_PUBLIC_KEY (run scripts/sparkle-setup.sh once)" >&2
+            exit 1
+          fi
+          if [ -z "$PRIVATE_KEY" ]; then
+            echo "::error::Set GitHub Actions secret SPARKLE_PRIVATE_KEY" >&2
+            exit 1
+          fi
+
+      - name: Cache Sparkle
+        uses: actions/cache@v4
+        with:
+          path: vendor/sparkle
+          key: sparkle-2.7.1-${{ runner.os }}
+
+      - name: Fetch Sparkle
+        run: ./scripts/fetch-sparkle.sh
+
+      - name: Import signing certificate
+        env:
+          CERT_P12: ${{ secrets.CODESIGN_CERT_P12 }}
+          CERT_PASSWORD: ${{ secrets.CODESIGN_CERT_PASSWORD }}
+        run: |
+          if [ -z "$CERT_P12" ]; then
+            echo "No CODESIGN_CERT_P12 secret; building ad-hoc."
+            exit 0
+          fi
+          KEYCHAIN="$RUNNER_TEMP/slimshot-signing.keychain-db"
+          security create-keychain -p "" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "" "$KEYCHAIN"
+          echo "$CERT_P12" | base64 -D > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" \
+            -P "$CERT_PASSWORD" -T /usr/bin/codesign >/dev/null
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" "$KEYCHAIN" >/dev/null
+          rm -f "$RUNNER_TEMP/cert.p12"
+          echo "KEYCHAIN=$KEYCHAIN" >> "$GITHUB_ENV"
+
+      - name: Build and package
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+          BUILD_NUMBER: ${{ github.run_number }}
+          ARCHS: "-arch arm64 -arch x86_64"
+          SPARKLE_FEED_URL: https://github.com/${{ github.repository }}/releases/latest/download/appcast.xml
+          SPARKLE_PUBLIC_KEY: ${{ vars.SPARKLE_PUBLIC_KEY }}
+          CODESIGN_IDENTITY: ${{ secrets.CODESIGN_IDENTITY }}
+        run: |
+          export CODESIGN_KEYCHAIN="${KEYCHAIN:-}"
+          make clean
+          make
+          make dist
+
+      - name: Generate appcast
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+          BUILD_NUMBER: ${{ github.run_number }}
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          export VERSION BUILD_NUMBER
+          DOWNLOAD_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/Slimshot-${VERSION}-update.zip"
+          export DOWNLOAD_URL
+          export HOMEPAGE_URL="https://github.com/${GITHUB_REPOSITORY}"
+          export ZIP_PATH="dist/Slimshot-${VERSION}-update.zip"
+          ./scripts/generate-appcast.sh
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Slimshot ${{ steps.meta.outputs.version }}
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            dist/Slimshot-${{ steps.meta.outputs.version }}.zip
+            dist/Slimshot-${{ steps.meta.outputs.version }}.zip.sha256
+            dist/Slimshot-${{ steps.meta.outputs.version }}-update.zip
+            dist/Slimshot-${{ steps.meta.outputs.version }}-update.zip.sha256
+            dist/appcast.xml

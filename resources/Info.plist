@@ -43,6 +43,14 @@
     <true/>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>SUFeedURL</key>
+    <string></string>
+    <key>SUPublicEDKey</key>
+    <string></string>
+    <key>SUEnableAutomaticChecks</key>
+    <true/>
+    <key>SUScheduledCheckInterval</key>
+    <integer>86400</integer>
     <key>NSHumanReadableCopyright</key>
     <string>Copyright © 2026 Slimshot contributors. GPL-3.0-only.</string>
     <key>NSPrincipalClass</key>

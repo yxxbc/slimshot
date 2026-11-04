@@ -11,7 +11,7 @@ if [ ! -d "$APP" ]; then
 fi
 
 if [ -n "$IDENTITY" ]; then
-    args=(--force --deep --sign "$IDENTITY")
+    args=(--force --deep --preserve-metadata=entitlements --sign "$IDENTITY")
     if [ -n "$KEYCHAIN" ]; then
         args+=(--keychain "$KEYCHAIN")
     fi
@@ -19,7 +19,7 @@ if [ -n "$IDENTITY" ]; then
 else
     echo "warning: CODESIGN_IDENTITY is not set; signing ad-hoc." >&2
     echo "warning: Screen Recording permission may reset after rebuilds." >&2
-    args=(--force --deep --sign -)
+    args=(--force --deep --preserve-metadata=entitlements --sign -)
 fi
 
 codesign "${args[@]}" "$APP"

@@ -9,6 +9,10 @@
 #import <CoreGraphics/CoreGraphics.h>
 #import <dispatch/dispatch.h>
 
+#if HAVE_SPARKLE
+#import <Sparkle/Sparkle.h>
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -36,6 +40,9 @@
     NSMenu *_displayMenu;
     NSMenu *_pluginsMenu;
     BOOL _permissionAlertShown;
+#if HAVE_SPARKLE
+    SPUStandardUpdaterController *_updaterController;
+#endif
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
@@ -56,6 +63,9 @@
     [self registerConfiguredHotKeys];
 
     [self setupStatusItem];
+#if HAVE_SPARKLE
+    [self setupUpdater];
+#endif
     [self setupMenu];
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(screenParametersDidChange:)
@@ -366,6 +376,18 @@
     settingsItem.target = self;
     [menu addItem:settingsItem];
 
+    NSMenuItem *updateItem =
+        [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"menu.check_updates", nil)
+                                   action:@selector(checkForUpdates:)
+                            keyEquivalent:@""];
+    updateItem.target = self;
+#if HAVE_SPARKLE
+    updateItem.enabled = (_updaterController != nil);
+#else
+    updateItem.enabled = NO;
+#endif
+    [menu addItem:updateItem];
+
     NSMenuItem *aboutItem = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"menu.about", nil)
                                                        action:@selector(showAbout:)
                                                 keyEquivalent:@""];
@@ -476,6 +498,33 @@
         _aboutController = [[SlimAboutWindowController alloc] init];
     }
     [_aboutController present];
+}
+
+#if HAVE_SPARKLE
+- (void)setupUpdater {
+    NSBundle *bundle = [NSBundle mainBundle];
+    NSString *feed = [bundle objectForInfoDictionaryKey:@"SUFeedURL"];
+    NSString *key = [bundle objectForInfoDictionaryKey:@"SUPublicEDKey"];
+    if (feed.length == 0 || key.length == 0) {
+        slim_log("sparkle disabled: missing feed URL or public key");
+        return;
+    }
+    _updaterController = [[SPUStandardUpdaterController alloc]
+        initWithStartingUpdater:YES
+               updaterDelegate:nil
+            userDriverDelegate:nil];
+    slim_log("sparkle updater started");
+}
+#endif
+
+- (void)checkForUpdates:(id)sender {
+#if HAVE_SPARKLE
+    if (_updaterController != nil) {
+        [_updaterController checkForUpdates:sender];
+    }
+#else
+    (void)sender;
+#endif
 }
 
 - (void)quitApp:(id)sender {

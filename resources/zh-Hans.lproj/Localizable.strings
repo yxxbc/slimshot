@@ -10,6 +10,7 @@
 "menu.permission.status.denied" = "屏幕录制：未授权";
 "menu.permission" = "屏幕录制权限…";
 "menu.settings" = "设置…";
+"menu.check_updates" = "检查更新…";
 "menu.about" = "关于 Slimshot";
 "menu.quit" = "退出 Slimshot";
 

@@ -3,6 +3,12 @@ SHELL := /bin/bash
 APP_NAME := Slimshot
 VERSION ?= 0.1.0
 BUILD_NUMBER ?= 1
+ARCHS ?=
+SPARKLE_DIR ?= vendor/sparkle
+SPARKLE_FRAMEWORK := $(SPARKLE_DIR)/Sparkle.framework
+HAVE_SPARKLE := $(shell test -d "$(SPARKLE_FRAMEWORK)" && echo 1 || echo 0)
+SPARKLE_FEED_URL ?=
+SPARKLE_PUBLIC_KEY ?=
 
 MACOSX_DEPLOYMENT_TARGET := 14.0
 SDKROOT := $(shell xcrun --sdk macosx --show-sdk-path)
@@ -52,21 +58,39 @@ OBJS := $(C_OBJS) $(M_OBJS) $(VENDOR_OBJS)
 
 CFLAGS := -std=c11 -Wall -Wextra -Wpedantic -O2 -g -fno-omit-frame-pointer \
 	-mmacosx-version-min=$(MACOSX_DEPLOYMENT_TARGET) -isysroot $(SDKROOT) \
-	-Isrc -Isrc/core -Isrc/bridge -Isrc/vendor/cjson -MMD -MP
+	-Isrc -Isrc/core -Isrc/bridge -Isrc/vendor/cjson $(ARCHS) -MMD -MP
 OBJCFLAGS := -fobjc-arc -Wall -Wextra -O2 -g -fno-omit-frame-pointer \
 	-mmacosx-version-min=$(MACOSX_DEPLOYMENT_TARGET) -isysroot $(SDKROOT) \
-	-Isrc -Isrc/core -Isrc/bridge -Isrc/vendor/cjson -MMD -MP
+	-Isrc -Isrc/core -Isrc/bridge -Isrc/vendor/cjson $(ARCHS) -MMD -MP
 VENDOR_CFLAGS := -std=c11 -O2 -g -mmacosx-version-min=$(MACOSX_DEPLOYMENT_TARGET) \
-	-isysroot $(SDKROOT) -Isrc/vendor/cjson -MMD -MP
+	-isysroot $(SDKROOT) -Isrc/vendor/cjson $(ARCHS) -MMD -MP
 TEST_CFLAGS := $(filter-out -MMD -MP,$(CFLAGS))
 LDFLAGS := -mmacosx-version-min=$(MACOSX_DEPLOYMENT_TARGET) -isysroot $(SDKROOT) \
-	-framework Cocoa -framework CoreGraphics -framework Foundation \
+	$(ARCHS) -framework Cocoa -framework CoreGraphics -framework Foundation \
 	-framework Carbon -framework ScreenCaptureKit -framework CoreMedia -framework ImageIO
+
+ifeq ($(HAVE_SPARKLE),1)
+SPARKLE_CFLAGS := -DHAVE_SPARKLE=1 -F$(SPARKLE_DIR)
+SPARKLE_LDFLAGS := -F$(SPARKLE_DIR) -framework Sparkle \
+	-Wl,-rpath,@executable_path/../Frameworks
+SPARKLE_APP_DEP := $(SPARKLE_FRAMEWORK) $(SPARKLE_DIR)/LICENSE
+else
+SPARKLE_CFLAGS := -DHAVE_SPARKLE=0
+SPARKLE_LDFLAGS :=
+SPARKLE_APP_DEP :=
+endif
+
+OBJCFLAGS += $(SPARKLE_CFLAGS)
+LDFLAGS += $(SPARKLE_LDFLAGS)
+
+ifeq ($(HAVE_SPARKLE),0)
+$(info note: Sparkle.framework not found; run ./scripts/fetch-sparkle.sh to enable updates)
+endif
 
 CODESIGN_IDENTITY ?=
 CODESIGN_KEYCHAIN ?=
 
-.PHONY: all clean run debug test sign dist logs
+.PHONY: all clean run debug test sign dist logs sparkle
 
 all: $(APP_BUNDLE)
 
@@ -105,6 +129,7 @@ $(EDITOR_BIN): $(EDITOR_SRC)
 		-framework Cocoa -framework ImageIO -framework CoreGraphics
 
 $(APP_BUNDLE): $(MACOS_DIR)/$(APP_NAME) resources/Info.plist \
+		$(SPARKLE_APP_DEP) \
 		resources/icon/Slimshot.icns \
 		LICENSE \
 		$(OCR_BIN) $(OCR_MANIFEST) \
@@ -115,6 +140,20 @@ $(APP_BUNDLE): $(MACOS_DIR)/$(APP_NAME) resources/Info.plist \
 	@mkdir -p $(RESOURCES_DIR)/en.lproj $(RESOURCES_DIR)/zh-Hans.lproj
 	@mkdir -p $(RESOURCES_DIR)/Plugins/ocr $(RESOURCES_DIR)/Plugins/editor
 	cp resources/Info.plist $(CONTENTS_DIR)/Info.plist
+	plutil -replace CFBundleShortVersionString -string "$(VERSION)" $(CONTENTS_DIR)/Info.plist
+	plutil -replace CFBundleVersion -string "$(BUILD_NUMBER)" $(CONTENTS_DIR)/Info.plist
+	if [ -n "$(SPARKLE_FEED_URL)" ]; then \
+		plutil -replace SUFeedURL -string "$(SPARKLE_FEED_URL)" $(CONTENTS_DIR)/Info.plist; \
+	fi
+	if [ -n "$(SPARKLE_PUBLIC_KEY)" ]; then \
+		plutil -replace SUPublicEDKey -string "$(SPARKLE_PUBLIC_KEY)" $(CONTENTS_DIR)/Info.plist; \
+	fi
+ifeq ($(HAVE_SPARKLE),1)
+	@mkdir -p $(CONTENTS_DIR)/Frameworks
+	rm -rf "$(CONTENTS_DIR)/Frameworks/Sparkle.framework"
+	ditto "$(SPARKLE_FRAMEWORK)" "$(CONTENTS_DIR)/Frameworks/Sparkle.framework"
+	cp "$(SPARKLE_DIR)/LICENSE" $(RESOURCES_DIR)/Sparkle-LICENSE
+endif
 	cp resources/icon/Slimshot.icns $(RESOURCES_DIR)/Slimshot.icns
 	cp LICENSE $(RESOURCES_DIR)/LICENSE
 	cp $(OCR_BIN) $(RESOURCES_DIR)/Plugins/ocr/ocr
@@ -130,6 +169,9 @@ $(APP_BUNDLE): $(MACOS_DIR)/$(APP_NAME) resources/Info.plist \
 
 run: all
 	open "$(APP_BUNDLE)"
+
+sparkle:
+	./scripts/fetch-sparkle.sh
 
 debug: all
 	"$(MACOS_DIR)/$(APP_NAME)"
