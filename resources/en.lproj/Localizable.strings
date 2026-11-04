@@ -17,6 +17,11 @@
 "about.close" = "Close";
 
 "settings.title" = "Slimshot Settings";
+"settings.sidebar.general" = "General";
+"settings.sidebar.capture" = "Capture";
+"settings.sidebar.output" = "Output";
+"settings.sidebar.hotkeys" = "Hotkeys";
+"settings.sidebar.plugins" = "Plugins";
 "settings.capture_options" = "Capture";
 "settings.include_cursor" = "Include mouse cursor";
 "settings.capture" = "After Capture";
@@ -32,14 +37,24 @@
 "settings.folder_label" = "Save folder";
 "settings.choose" = "Choose…";
 "settings.open_config" = "Open Config Folder";
+"settings.config.section" = "Configuration";
+"settings.config_path_label" = "Config file";
 "settings.permission" = "Screen Recording Permission…";
 "settings.permission.section" = "Permission";
 "settings.permission.label" = "Screen Recording";
 "settings.permission.status.granted" = "Allowed";
 "settings.permission.status.denied" = "Not allowed";
 "settings.permission.restart" = "Restart Slimshot after changing this permission.";
-"settings.config_path" = "Config: %@";
-"settings.close" = "Close";
+"settings.hotkeys.section" = "Current Hotkeys";
+"settings.hotkeys.fullscreen" = "Full screen";
+"settings.hotkeys.window" = "Window";
+"settings.hotkeys.region" = "Region";
+"settings.hotkeys.hint" = "Edit config.json and restart Slimshot to change hotkeys.";
+"settings.hotkeys.open_config" = "Open Config File";
+"settings.plugins.directory" = "Plugin Folder";
+"settings.plugins.user" = "User plugins";
+"settings.plugins.open" = "Open Plugin Folder";
+"settings.plugins.hint" = "Plugins are not enabled in this build yet.";
 
 "alert.permission.title" = "Screen Recording Permission Required";
 "alert.permission.body" = "Slimshot needs Screen Recording permission to capture your screen. Open System Settings → Privacy & Security → Screen & System Audio Recording, enable Slimshot, then relaunch the app.";

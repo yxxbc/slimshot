@@ -37,6 +37,7 @@ M_SRCS := \
 	src/bridge/permissions.m \
 	src/bridge/screen_geometry.m \
 	src/bridge/settings.m \
+	src/bridge/settings_sidebar.m \
 	src/bridge/status_icon.m \
 	src/bridge/thumbnail.m
 

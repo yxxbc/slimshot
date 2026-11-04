@@ -17,6 +17,11 @@
 "about.close" = "关闭";
 
 "settings.title" = "Slimshot 设置";
+"settings.sidebar.general" = "通用";
+"settings.sidebar.capture" = "截图";
+"settings.sidebar.output" = "输出";
+"settings.sidebar.hotkeys" = "热键";
+"settings.sidebar.plugins" = "插件";
 "settings.capture_options" = "截图";
 "settings.include_cursor" = "包含鼠标指针";
 "settings.capture" = "截图后";
@@ -32,14 +37,24 @@
 "settings.folder_label" = "保存目录";
 "settings.choose" = "选择…";
 "settings.open_config" = "打开配置目录";
+"settings.config.section" = "配置";
+"settings.config_path_label" = "配置文件";
 "settings.permission" = "屏幕录制权限…";
 "settings.permission.section" = "权限";
 "settings.permission.label" = "屏幕录制";
 "settings.permission.status.granted" = "已授权";
 "settings.permission.status.denied" = "未授权";
 "settings.permission.restart" = "更改权限后需要重新启动 Slimshot。";
-"settings.config_path" = "配置文件：%@";
-"settings.close" = "关闭";
+"settings.hotkeys.section" = "当前热键";
+"settings.hotkeys.fullscreen" = "全屏";
+"settings.hotkeys.window" = "窗口";
+"settings.hotkeys.region" = "区域";
+"settings.hotkeys.hint" = "在 config.json 中修改热键，重启 Slimshot 后生效。";
+"settings.hotkeys.open_config" = "打开配置文件";
+"settings.plugins.directory" = "插件目录";
+"settings.plugins.user" = "用户插件";
+"settings.plugins.open" = "打开插件目录";
+"settings.plugins.hint" = "当前版本尚未启用插件。";
 
 "alert.permission.title" = "需要屏幕录制权限";
 "alert.permission.body" = "Slimshot 需要屏幕录制权限才能截图。请前往“系统设置 → 隐私与安全性 → 屏幕与系统音频录制”启用 Slimshot，然后重新启动应用。";
