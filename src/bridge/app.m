@@ -31,6 +31,7 @@
     slim_config_t _config;
     NSStatusItem *_statusItem;
     NSMenuItem *_permissionStatusItem;
+    NSMenuItem *_permissionActionItem;
     SettingsWindowController *_settingsController;
     SlimAboutWindowController *_aboutController;
     SlimCaptureController *_captureController;
@@ -72,8 +73,9 @@
                                                  name:NSApplicationDidChangeScreenParametersNotification
                                                object:nil];
     [self refreshPermissionStatus];
-    slim_log("screen recording authorized: %s",
-             slim_screen_capture_authorized() ? "yes" : "no");
+    slim_log("screen recording authorized: %s (state=%d)",
+             slim_screen_capture_authorized() ? "yes" : "no",
+             (int)slim_screen_capture_state());
 
     if (getenv("SLIMSHOT_OPEN_SETTINGS") != NULL) {
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)),
@@ -96,16 +98,11 @@
         });
     }
 
-    if (getenv("SLIMSHOT_SKIP_PERMISSION_PROMPT") == NULL &&
-        !slim_screen_capture_authorized()) {
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.6 * NSEC_PER_SEC)),
-                       dispatch_get_main_queue(), ^{
-            if (!self->_permissionAlertShown) {
-                self->_permissionAlertShown = YES;
-                [self showPermissionAlert];
-            }
-        });
-    }
+    /* No permission dialog here. macOS shows its own consent dialog the first
+     * time we ask, and a menu bar app cannot be frontmost at launch, so asking
+     * now would only be discarded by TCC. The request happens the first time
+     * the user actually tries to capture, or when they pick "Allow Screen
+     * Recording…" from the menu. */
 }
 
 - (void)registerHotKeySpec:(const char *)spec
@@ -362,12 +359,12 @@
     _permissionStatusItem.enabled = NO;
     [menu addItem:_permissionStatusItem];
 
-    NSMenuItem *permissionItem =
-        [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"menu.permission", nil)
+    _permissionActionItem =
+        [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"menu.permission.request", nil)
                                    action:@selector(showPermission:)
                             keyEquivalent:@""];
-    permissionItem.target = self;
-    [menu addItem:permissionItem];
+    _permissionActionItem.target = self;
+    [menu addItem:_permissionActionItem];
 
     [menu addItem:[NSMenuItem separatorItem]];
 
@@ -408,9 +405,71 @@
 }
 
 - (void)refreshPermissionStatus {
-    BOOL granted = slim_screen_capture_authorized();
-    _permissionStatusItem.title = NSLocalizedString(
-        granted ? @"menu.permission.status.granted" : @"menu.permission.status.denied", nil);
+    slim_permission_state_t state = slim_screen_capture_state();
+
+    NSString *statusKey = nil;
+    NSString *actionKey = nil;
+    switch (state) {
+    case SLIM_PERMISSION_GRANTED:
+        statusKey = @"menu.permission.status.granted";
+        actionKey = @"menu.permission";
+        break;
+    case SLIM_PERMISSION_DENIED:
+        statusKey = @"menu.permission.status.denied";
+        actionKey = @"menu.permission.settings";
+        break;
+    case SLIM_PERMISSION_UNKNOWN:
+    default:
+        statusKey = @"menu.permission.status.unknown";
+        actionKey = @"menu.permission.request";
+        break;
+    }
+    _permissionStatusItem.title = NSLocalizedString(statusKey, nil);
+    _permissionActionItem.title = NSLocalizedString(actionKey, nil);
+}
+
+- (void)requestScreenCaptureAccess {
+    (void)slim_screen_capture_request_frontmost();
+    [self refreshPermissionStatus];
+}
+
+- (void)handleMissingPermission {
+    /* Let macOS own the whole flow: its dialog is the one registering Slimshot
+     * with TCC, and its buttons already offer to open System Settings. */
+    if (slim_screen_capture_request_frontmost()) {
+        return;
+    }
+
+    if (slim_screen_capture_state() != SLIM_PERMISSION_UNKNOWN) {
+        /* Already asked and refused: the system will not prompt again in this
+         * login session, so the toggle list is the only remaining step. */
+        slim_open_screen_capture_settings();
+    }
+}
+
+- (void)showPermission:(id)sender {
+    (void)sender;
+
+    switch (slim_screen_capture_state()) {
+    case SLIM_PERMISSION_GRANTED: {
+        [NSApp activateIgnoringOtherApps:YES];
+        NSAlert *alert = [[NSAlert alloc] init];
+        alert.messageText = NSLocalizedString(@"alert.permission.granted.title", nil);
+        alert.informativeText = NSLocalizedString(@"alert.permission.granted.body", nil);
+        [alert addButtonWithTitle:NSLocalizedString(@"alert.ok", nil)];
+        [alert runModal];
+        break;
+    }
+    case SLIM_PERMISSION_UNKNOWN:
+        /* First ask: the system dialog is the whole experience. */
+        [self requestScreenCaptureAccess];
+        break;
+    case SLIM_PERMISSION_DENIED:
+    default:
+        slim_open_screen_capture_settings();
+        break;
+    }
+    [self refreshPermissionStatus];
 }
 
 - (void)showPermissionAlert {
@@ -421,37 +480,19 @@
     alert.messageText = NSLocalizedString(@"alert.permission.title", nil);
     alert.informativeText = NSLocalizedString(@"alert.permission.body", nil);
     [alert addButtonWithTitle:NSLocalizedString(@"alert.permission.open", nil)];
-    [alert addButtonWithTitle:NSLocalizedString(@"alert.permission.request", nil)];
     [alert addButtonWithTitle:NSLocalizedString(@"alert.permission.later", nil)];
 
     NSModalResponse response = [alert runModal];
     if (response == NSAlertFirstButtonReturn) {
+        [self requestScreenCaptureAccess];
         slim_open_screen_capture_settings();
-    } else if (response == NSAlertSecondButtonReturn) {
-        (void)slim_request_screen_capture();
-    }
-    [self refreshPermissionStatus];
-}
-
-- (void)showPermission:(id)sender {
-    (void)sender;
-
-    if (slim_screen_capture_authorized()) {
-        [NSApp activateIgnoringOtherApps:YES];
-        NSAlert *alert = [[NSAlert alloc] init];
-        alert.messageText = NSLocalizedString(@"alert.permission.granted.title", nil);
-        alert.informativeText = NSLocalizedString(@"alert.permission.granted.body", nil);
-        [alert addButtonWithTitle:NSLocalizedString(@"alert.ok", nil)];
-        [alert runModal];
-    } else {
-        [self showPermissionAlert];
     }
     [self refreshPermissionStatus];
 }
 
 - (void)beginCaptureMode:(SlimCaptureMode)mode {
     if (!slim_screen_capture_authorized()) {
-        [self showPermissionAlert];
+        [self handleMissingPermission];
         return;
     }
 

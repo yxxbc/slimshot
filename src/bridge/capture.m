@@ -16,6 +16,7 @@
 #include "log.h"
 #include "output.h"
 #include "overlay.h"
+#include "permissions.h"
 #include "plugins.h"
 #include "screen_geometry.h"
 #include "thumbnail.h"
@@ -475,6 +476,15 @@
     if (message.length == 0) {
         message = NSLocalizedString(@"capture.error.unknown", nil);
     }
+
+    /* TCC can revoke access between the menu check and the capture, and
+     * ScreenCaptureKit reports that as a bare -3801 with no useful text. */
+    if (!slim_screen_capture_authorized()) {
+        slim_log("capture failed: screen recording not authorized (code=%ld)",
+                 (long)error.code);
+        message = NSLocalizedString(@"capture.error.permission", nil);
+    }
+
     [self failWithMessage:message];
 }
 

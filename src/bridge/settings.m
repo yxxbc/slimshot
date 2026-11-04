@@ -18,16 +18,43 @@
 #include "settings.h"
 #include "settings_sidebar.h"
 
-static const CGFloat kSettingsLabelWidth = 112.0;
-static const CGFloat kSettingsPaneMargin = 24.0;
+static const CGFloat kSettingsLabelWidth = 128.0;
+static const CGFloat kSettingsPaneMargin = 20.0;
 static const CGFloat kSettingsWindowWidth = 760.0;
 static const CGFloat kSettingsWindowHeight = 520.0;
+
+/* AppKit scrolls from the bottom edge, so the document view has to be flipped
+ * for content to start at the top the way every macOS settings pane does. */
+@interface SlimFlippedView : NSView
+@end
+
+@implementation SlimFlippedView
+- (BOOL)isFlipped {
+    return YES;
+}
+@end
+
+/* Rounded card that draws in -drawRect: rather than via CALayer, so the fill
+ * follows light/dark appearance changes automatically. */
+@interface SlimSettingsCard : NSView
+@end
+
+@implementation SlimSettingsCard
+- (void)drawRect:(NSRect)dirtyRect {
+    (void)dirtyRect;
+    NSBezierPath *path =
+        [NSBezierPath bezierPathWithRoundedRect:self.bounds xRadius:10.0 yRadius:10.0];
+    [[NSColor.controlBackgroundColor colorWithAlphaComponent:0.55] setFill];
+    [path fill];
+}
+@end
 
 @implementation SettingsWindowController {
     slim_config_t *_config;
     SlimSettingsSidebarController *_sidebarController;
     NSView *_contentContainer;
     NSArray<NSView *> *_paneViews;
+    NSStackView *_activeCardRows;
 
     NSButton *_includeCursorCheck;
     NSButton *_copyCheck;
@@ -42,6 +69,7 @@ static const CGFloat kSettingsWindowHeight = 520.0;
     NSTextField *_heicValueLabel;
     NSTextField *_folderLabel;
     NSTextField *_permissionStatusLabel;
+    NSButton *_permissionButton;
     NSTextField *_configPathLabel;
     NSTextField *_installedPluginsLabel;
     NSString *_pluginDirectoryPath;
@@ -150,45 +178,117 @@ static const CGFloat kSettingsWindowHeight = 520.0;
     }
 }
 
+
 - (NSView *)paneWithTitle:(NSString *)title build:(void (^)(NSStackView *stack))build {
-    NSView *pane = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 550, 480)];
+    /* Reset per pane: otherwise the first rows of a pane without a section
+     * header would be added to the previous pane's card. */
+    _activeCardRows = nil;
+    SlimFlippedView *document = [[SlimFlippedView alloc] initWithFrame:NSMakeRect(0, 0, 550, 480)];
+
     NSTextField *heading = [NSTextField labelWithString:title];
     heading.font = [NSFont systemFontOfSize:20.0 weight:NSFontWeightSemibold];
     heading.translatesAutoresizingMaskIntoConstraints = NO;
-    [pane addSubview:heading];
+    [document addSubview:heading];
 
     NSStackView *stack = [NSStackView stackViewWithViews:@[]];
     stack.orientation = NSUserInterfaceLayoutOrientationVertical;
     stack.alignment = NSLayoutAttributeLeading;
-    stack.spacing = 8.0;
+    stack.spacing = 14.0;
     stack.translatesAutoresizingMaskIntoConstraints = NO;
-    [pane addSubview:stack];
+    [document addSubview:stack];
 
     [NSLayoutConstraint activateConstraints:@[
-        [heading.topAnchor constraintEqualToAnchor:pane.topAnchor
+        [heading.topAnchor constraintEqualToAnchor:document.topAnchor
                                           constant:kSettingsPaneMargin],
-        [heading.leadingAnchor constraintEqualToAnchor:pane.leadingAnchor
+        [heading.leadingAnchor constraintEqualToAnchor:document.leadingAnchor
                                               constant:kSettingsPaneMargin],
-        [heading.trailingAnchor constraintLessThanOrEqualToAnchor:pane.trailingAnchor
+        [heading.trailingAnchor constraintLessThanOrEqualToAnchor:document.trailingAnchor
                                                           constant:-kSettingsPaneMargin],
         [stack.topAnchor constraintEqualToAnchor:heading.bottomAnchor constant:16.0],
-        [stack.leadingAnchor constraintEqualToAnchor:pane.leadingAnchor
+        [stack.leadingAnchor constraintEqualToAnchor:document.leadingAnchor
                                             constant:kSettingsPaneMargin],
-        [stack.trailingAnchor constraintEqualToAnchor:pane.trailingAnchor
+        [stack.trailingAnchor constraintEqualToAnchor:document.trailingAnchor
                                              constant:-kSettingsPaneMargin],
-        [stack.bottomAnchor constraintLessThanOrEqualToAnchor:pane.bottomAnchor
-                                                     constant:-kSettingsPaneMargin],
+        [stack.bottomAnchor constraintEqualToAnchor:document.bottomAnchor
+                                           constant:-kSettingsPaneMargin],
     ]];
 
     build(stack);
-    return pane;
+
+    /* Every pane scrolls: once all options are shown they exceed the window,
+     * and a settings pane that silently clips its last row looks broken. */
+    NSScrollView *scroll = [[NSScrollView alloc] initWithFrame:NSZeroRect];
+    scroll.translatesAutoresizingMaskIntoConstraints = NO;
+    scroll.drawsBackground = NO;
+    scroll.hasVerticalScroller = YES;
+    scroll.autohidesScrollers = YES;
+    scroll.borderType = NSNoBorder;
+    scroll.documentView = document;
+
+    NSView *host = [[NSView alloc] initWithFrame:NSZeroRect];
+    [host addSubview:scroll];
+    [NSLayoutConstraint activateConstraints:@[
+        [scroll.topAnchor constraintEqualToAnchor:host.topAnchor],
+        [scroll.leadingAnchor constraintEqualToAnchor:host.leadingAnchor],
+        [scroll.trailingAnchor constraintEqualToAnchor:host.trailingAnchor],
+        [scroll.bottomAnchor constraintEqualToAnchor:host.bottomAnchor],
+        [document.widthAnchor constraintEqualToAnchor:scroll.contentView.widthAnchor],
+    ]];
+
+    return host;
+}
+
+/* Grouped card: one section header, then one row per setting. Labels sit on the
+ * left and controls on the right, so a pane reads as a list of settings instead
+ * of a spreadsheet. Returns the stack that rows should be added to. */
+- (NSStackView *)cardWithTitle:(NSString *)title inStack:(NSStackView *)stack {
+    SlimSettingsCard *card = [[SlimSettingsCard alloc] initWithFrame:NSZeroRect];
+    card.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSStackView *rows = [NSStackView stackViewWithViews:@[]];
+    rows.orientation = NSUserInterfaceLayoutOrientationVertical;
+    rows.alignment = NSLayoutAttributeLeading;
+    rows.spacing = 10.0;
+    rows.translatesAutoresizingMaskIntoConstraints = NO;
+    [card addSubview:rows];
+
+    if (title.length > 0) {
+        NSTextField *header = [NSTextField labelWithString:title];
+        header.font = [NSFont systemFontOfSize:12.0 weight:NSFontWeightSemibold];
+        header.textColor = [NSColor secondaryLabelColor];
+        header.translatesAutoresizingMaskIntoConstraints = NO;
+        [card addSubview:header];
+        [NSLayoutConstraint activateConstraints:@[
+            [header.topAnchor constraintEqualToAnchor:card.topAnchor constant:12.0],
+            [header.leadingAnchor constraintEqualToAnchor:card.leadingAnchor constant:14.0],
+            [header.trailingAnchor constraintLessThanOrEqualToAnchor:card.trailingAnchor
+                                                            constant:-14.0],
+            [rows.topAnchor constraintEqualToAnchor:header.bottomAnchor constant:10.0],
+        ]];
+    } else {
+        [NSLayoutConstraint activateConstraints:@[
+            [rows.topAnchor constraintEqualToAnchor:card.topAnchor constant:12.0],
+        ]];
+    }
+
+    [NSLayoutConstraint activateConstraints:@[
+        [rows.leadingAnchor constraintEqualToAnchor:card.leadingAnchor constant:14.0],
+        [rows.trailingAnchor constraintEqualToAnchor:card.trailingAnchor constant:-14.0],
+        [rows.bottomAnchor constraintEqualToAnchor:card.bottomAnchor constant:-12.0],
+    ]];
+
+    [stack addArrangedSubview:card];
+    [card.widthAnchor constraintEqualToAnchor:stack.widthAnchor].active = YES;
+    return rows;
 }
 
 - (NSTextField *)formLabel:(NSString *)text {
     NSTextField *label = [NSTextField labelWithString:text];
-    label.alignment = NSTextAlignmentRight;
+    label.alignment = NSTextAlignmentLeft;
     label.font = [NSFont systemFontOfSize:13.0];
     [label.widthAnchor constraintEqualToConstant:kSettingsLabelWidth].active = YES;
+    [label setContentHuggingPriority:NSLayoutPriorityDefaultHigh
+                      forOrientation:NSLayoutConstraintOrientationHorizontal];
     return label;
 }
 
@@ -203,9 +303,12 @@ static const CGFloat kSettingsWindowHeight = 520.0;
 - (void)addRowToStack:(NSStackView *)stack
                 label:(NSString *)label
               control:(NSView *)control {
+    /* Rows always land in the card created by the last addSectionHeader:, which
+     * is what gives a pane one visual group per section. */
+    NSStackView *target = (_activeCardRows != nil) ? _activeCardRows : stack;
     NSStackView *row = [self formRowWithLabel:label control:control];
-    [stack addArrangedSubview:row];
-    [row.widthAnchor constraintEqualToAnchor:stack.widthAnchor].active = YES;
+    [target addArrangedSubview:row];
+    [row.widthAnchor constraintEqualToAnchor:target.widthAnchor].active = YES;
 }
 
 - (void)addCheckboxRowToStack:(NSStackView *)stack checkbox:(NSButton *)checkbox {
@@ -213,19 +316,7 @@ static const CGFloat kSettingsWindowHeight = 520.0;
 }
 
 - (void)addSectionHeader:(NSString *)title toStack:(NSStackView *)stack {
-    if (stack.arrangedSubviews.count > 0) {
-        NSBox *separator = [[NSBox alloc] init];
-        separator.boxType = NSBoxSeparator;
-        [stack addArrangedSubview:separator];
-        [separator.widthAnchor constraintEqualToAnchor:stack.widthAnchor].active = YES;
-        [stack setCustomSpacing:16.0 afterView:separator];
-    }
-
-    NSTextField *header = [NSTextField labelWithString:title];
-    header.font = [NSFont systemFontOfSize:12.0 weight:NSFontWeightSemibold];
-    header.textColor = [NSColor secondaryLabelColor];
-    [stack addArrangedSubview:header];
-    [stack setCustomSpacing:10.0 afterView:header];
+    _activeCardRows = [self cardWithTitle:title inStack:stack];
 }
 
 - (NSTextField *)pathLabelWithText:(NSString *)text {
@@ -271,6 +362,7 @@ static const CGFloat kSettingsWindowHeight = 520.0;
             [NSButton buttonWithTitle:NSLocalizedString(@"settings.permission", nil)
                                target:self
                                action:@selector(openPermissionSettings:)];
+        _permissionButton = permissionButton;
         NSStackView *permissionControl =
             [NSStackView stackViewWithViews:@[ _permissionStatusLabel, permissionButton ]];
         permissionControl.orientation = NSUserInterfaceLayoutOrientationHorizontal;
@@ -363,6 +455,8 @@ static const CGFloat kSettingsWindowHeight = 520.0;
 - (NSView *)buildOutputPane {
     return [self paneWithTitle:NSLocalizedString(@"settings.sidebar.output", nil)
                           build:^(NSStackView *stack) {
+        [self addSectionHeader:NSLocalizedString(@"settings.output", nil) toStack:stack];
+
         _formatPopup = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
         [_formatPopup addItemsWithTitles:@[ @"PNG", @"JPEG", @"HEIC", @"TIFF" ]];
         _formatPopup.target = self;
@@ -595,12 +689,31 @@ static const CGFloat kSettingsWindowHeight = 520.0;
     if (_permissionStatusLabel == nil) {
         return;
     }
-    BOOL granted = slim_screen_capture_authorized();
-    _permissionStatusLabel.stringValue = NSLocalizedString(
-        granted ? @"settings.permission.status.granted"
-                : @"settings.permission.status.denied", nil);
-    _permissionStatusLabel.textColor =
-        granted ? [NSColor systemGreenColor] : [NSColor systemOrangeColor];
+
+    slim_permission_state_t state = slim_screen_capture_state();
+    NSString *statusKey = nil;
+    BOOL granted = NO;
+    switch (state) {
+    case SLIM_PERMISSION_GRANTED:
+        statusKey = @"settings.permission.status.granted";
+        granted = YES;
+        break;
+    case SLIM_PERMISSION_DENIED:
+        statusKey = @"settings.permission.status.denied";
+        break;
+    case SLIM_PERMISSION_UNKNOWN:
+    default:
+        statusKey = @"settings.permission.status.unknown";
+        break;
+    }
+    _permissionStatusLabel.stringValue = NSLocalizedString(statusKey, nil);
+    _permissionStatusLabel.textColor = granted ? [NSColor systemGreenColor]
+                                               : [NSColor systemOrangeColor];
+
+    NSString *buttonKey = (state == SLIM_PERMISSION_UNKNOWN)
+                              ? @"settings.permission.request"
+                              : @"settings.permission";
+    _permissionButton.title = NSLocalizedString(buttonKey, nil);
 }
 
 - (void)applicationDidBecomeActive:(NSNotification *)notification {
@@ -750,6 +863,18 @@ static const CGFloat kSettingsWindowHeight = 520.0;
 
 - (void)openPermissionSettings:(id)sender {
     (void)sender;
+
+    /* Never asked: let macOS show its own prompt first, because that is what
+     * registers the bundle in System Settings. Only send the user to the
+     * toggle list once a real request has been made. */
+    if (slim_screen_capture_state() == SLIM_PERMISSION_UNKNOWN) {
+        _permissionStatusLabel.stringValue =
+            NSLocalizedString(@"settings.permission.requesting", nil);
+        (void)slim_screen_capture_request_frontmost();
+        [self refreshPermissionStatus];
+        return;
+    }
+
     slim_open_screen_capture_settings();
 }
 

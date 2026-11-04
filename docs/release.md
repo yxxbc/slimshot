@@ -35,7 +35,7 @@ make sparkle        # 下载 Sparkle 2.7.1 到 vendor/sparkle（已 gitignore）
 
 ### 3. 签名证书（强烈建议）
 
-CI 可以 ad-hoc 构建，但 ad-hoc 的屏幕录制权限会在每次更新后失效。正式发布请配置稳定自签名证书：
+CI 可以 ad-hoc 构建，但 ad-hoc 的屏幕录制权限会在每次更新后失效。正式发布请配置稳定自签名证书（**不需要付费 Apple Developer 账号**，自签名即可）：
 
 1. 本地运行 `./scripts/create-dev-cert.sh`（只需要一次）
 2. 从 Keychain 导出该身份的 `.p12`

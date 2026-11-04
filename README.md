@@ -121,34 +121,43 @@ SLIMSHOT_CAPTURE_ON_LAUNCH=full ./build/Slimshot.app/Contents/MacOS/Slimshot
 
 ## 权限
 
-Slimshot 需要“屏幕录制”权限。首次启动会弹窗引导；也可以从菜单栏打开“屏幕录制权限…”跳转到系统设置。
+Slimshot 只需要“屏幕录制”权限，流程和普通 Apple 官方 App 一致：
 
-不需要辅助功能权限。
+1. 启动时不弹任何框，安静地待在菜单栏。
+2. 第一次真正截图（菜单或热键）时，**macOS 自己的授权弹窗**出现，点“打开系统设置”即可。
+3. 这个请求同时把 Slimshot 写进“系统设置 → 隐私与安全性 → 屏幕与系统音频录制”列表，所以你去勾选时它是存在的。
+4. 勾选后系统会提示重新打开 Slimshot；重新打开就能截图。
 
-如果重新构建时换了签名身份，macOS 可能把新版本当成新 App，要求重新授权屏幕录制。开发期重新编译后如果权限失效，重新授权一次即可。
+如果之前点过“拒绝”，系统在本次登录期间不会再弹窗；此时从菜单栏点“打开系统设置（隐私与安全性）…”直接去勾选即可。菜单栏会显示当前状态：`已授权` / `已拒绝` / `未请求`。
 
-如果系统设置里已经勾选 Slimshot、但 App 仍提示未授权，可以重置该 App 的权限后重新授权：
+Slimshot 不申请辅助功能权限。
+
+权限状态丢失时（更换签名、重置 TCC 之后），先重置再重新授权：
 
 ```bash
 tccutil reset ScreenCapture com.slimshot.app
 ```
 
-然后重启 Slimshot，按提示重新开启屏幕录制。
+然后重新打开 Slimshot 并截一次图。
 
 ## 签名
 
-默认使用 ad-hoc 签名，方便开发，但每次重建后 cdhash 会变化，屏幕录制权限可能需要重新授权。
+**不需要付费的 Apple Developer 账号。** 免费的自签名证书就够了，它唯一的用途是让 bundle 的 designated requirement 在每次重建后保持不变——这样 macOS 才会记住你已经给过屏幕录制权限。
 
-正式构建请使用稳定的自签名证书：
+一次就好：
 
 ```bash
-./scripts/create-dev-cert.sh
-
-make clean
-CODESIGN_IDENTITY="Slimshot Dev" \
-CODESIGN_KEYCHAIN="$HOME/Library/Keychains/slimshot-dev.keychain-db" \
-make
+./scripts/create-dev-cert.sh    # 或者 make cert
 ```
+
+之后直接 `make` 就会自动用这个身份签名（`Makefile` 调用 `scripts/sign.sh`，它按指纹查找身份并自动解锁 keychain）。验证重建后权限不丢：
+
+```bash
+make clean && make
+codesign -d -r- build/Slimshot.app   # designated requirement 应保持不变
+```
+
+如果不做这一步，就会退回 ad-hoc 签名：cdhash 每次构建都变，TCC 把每个构建当成新 App，于是反复要求授权——这就是“每次重新编译权限就没了”的原因。
 
 自签名证书不经过 Apple 公证，Gatekeeper 仍会拦截首次打开；用 `install.command` 清除 quarantine 即可。
 
@@ -163,8 +172,8 @@ make dist
 
 产物：
 
-- `dist/Slimshot-0.1.0.zip`：用户安装包（app + `install.command` + LICENSE + README）
-- `dist/Slimshot-0.1.0-update.zip`：Sparkle 更新包（`Slimshot.app` 在 zip 根目录）
+- `dist/Slimshot-0.2.0.zip`：用户安装包（app + `install.command` + LICENSE + README）
+- `dist/Slimshot-0.2.0-update.zip`：Sparkle 更新包（`Slimshot.app` 在 zip 根目录）
 - 两个 `.sha256`
 
 用户安装包解压后双击 `install.command`，脚本会：

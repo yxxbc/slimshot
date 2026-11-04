@@ -1,9 +1,11 @@
 SHELL := /bin/bash
 
 APP_NAME := Slimshot
-VERSION ?= 0.1.0
+VERSION ?= 0.2.0
 BUILD_NUMBER ?= 1
-ARCHS ?=
+# Universal by default so a local build runs on Apple silicon and Intel Macs
+# alike. Pass ARCHS="" to build for the host architecture only.
+ARCHS ?= -arch arm64 -arch x86_64
 SPARKLE_DIR ?= vendor/sparkle
 SPARKLE_FRAMEWORK := $(SPARKLE_DIR)/Sparkle.framework
 HAVE_SPARKLE := $(shell test -d "$(SPARKLE_FRAMEWORK)" && echo 1 || echo 0)
@@ -91,7 +93,7 @@ endif
 CODESIGN_IDENTITY ?=
 CODESIGN_KEYCHAIN ?=
 
-.PHONY: all clean run debug test sign dist logs sparkle
+.PHONY: all clean run debug test sign dist logs sparkle cert
 
 all: $(APP_BUNDLE)
 
@@ -192,12 +194,11 @@ test: $(BUILD_DIR)/config_test $(BUILD_DIR)/plugin_test
 	$(BUILD_DIR)/plugin_test
 
 sign: $(APP_BUNDLE)
-	@if [ -z "$(CODESIGN_IDENTITY)" ]; then \
-		echo "CODESIGN_IDENTITY is required" >&2; \
-		exit 1; \
-	fi
 	CODESIGN_IDENTITY="$(CODESIGN_IDENTITY)" CODESIGN_KEYCHAIN="$(CODESIGN_KEYCHAIN)" \
 		./scripts/sign.sh "$(APP_BUNDLE)"
+
+cert:
+	./scripts/create-dev-cert.sh
 
 dist: all
 	VERSION="$(VERSION)" ./scripts/package.sh

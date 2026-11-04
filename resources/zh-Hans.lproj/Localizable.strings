@@ -7,8 +7,11 @@
 "menu.plugins.empty" = "未发现插件";
 "menu.plugins.no_capture" = "先截一张图再运行";
 "menu.permission.status.granted" = "屏幕录制：已授权";
-"menu.permission.status.denied" = "屏幕录制：未授权";
+"menu.permission.status.denied" = "屏幕录制：已拒绝";
+"menu.permission.status.unknown" = "屏幕录制：未请求";
 "menu.permission" = "屏幕录制权限…";
+"menu.permission.settings" = "打开系统设置（隐私与安全性）…";
+"menu.permission.request" = "允许屏幕录制…";
 "menu.settings" = "设置…";
 "menu.check_updates" = "检查更新…";
 "menu.about" = "关于 Slimshot";
@@ -43,12 +46,15 @@
 "settings.open_config" = "打开配置目录";
 "settings.config.section" = "配置";
 "settings.config_path_label" = "配置文件";
-"settings.permission" = "屏幕录制权限…";
+"settings.permission" = "打开系统设置…";
+"settings.permission.request" = "允许屏幕录制…";
 "settings.permission.section" = "权限";
 "settings.permission.label" = "屏幕录制";
 "settings.permission.status.granted" = "已授权";
-"settings.permission.status.denied" = "未授权";
-"settings.permission.restart" = "更改权限后需要重新启动 Slimshot。";
+"settings.permission.status.denied" = "已拒绝";
+"settings.permission.status.unknown" = "未请求";
+"settings.permission.restart" = "授权后需要重新打开 Slimshot 才能截图。";
+"settings.permission.requesting" = "等待系统授权…";
 "settings.hotkeys.section" = "当前热键";
 "settings.hotkeys.fullscreen" = "全屏";
 "settings.hotkeys.window" = "窗口";
@@ -62,14 +68,11 @@
 "settings.plugins.hint" = "在菜单栏「插件」中运行；也可以把新插件放进上面的目录。";
 
 "alert.permission.title" = "需要屏幕录制权限";
-"alert.permission.body" = "Slimshot 需要屏幕录制权限才能截图。请前往“系统设置 → 隐私与安全性 → 屏幕与系统音频录制”启用 Slimshot，然后重新启动应用。";
+"alert.permission.body" = "请在“系统设置 → 隐私与安全性 → 屏幕与系统音频录制”里打开 Slimshot，然后重新打开本应用。";
 "alert.permission.open" = "打开系统设置";
-"alert.permission.request" = "请求权限";
 "alert.permission.later" = "稍后";
 "alert.permission.granted.title" = "屏幕录制权限";
 "alert.permission.granted.body" = "屏幕录制权限已授权。";
-"alert.capture.title" = "截图";
-"alert.capture.body" = "%@ 将在 M1 实现。M0 只验证菜单栏、配置和权限流程。";
 "alert.save_failed.title" = "无法保存配置";
 "alert.ok" = "好";
 
@@ -92,6 +95,7 @@
 "capture.error.invalid_window_size" = "窗口返回了无效的尺寸。";
 "capture.error.window_overlay_failed" = "无法创建窗口选择覆盖层。";
 "capture.error.unknown" = "未知的截图错误。";
+"capture.error.permission" = "屏幕录制权限未开启。请在“系统设置 → 隐私与安全性 → 屏幕与系统音频录制”里打开 Slimshot，然后重新打开本应用。";
 
 "output.error.save_directory" = "无法解析保存目录。";
 "output.error.create_directory" = "无法创建 %s：%s";

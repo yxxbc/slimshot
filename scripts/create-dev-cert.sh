@@ -1,17 +1,52 @@
 #!/bin/bash
 set -euo pipefail
 
+# Creates a free, self-signed code signing identity for local builds.
+#
+# Slimshot needs no Apple Developer account. A self-signed certificate is enough
+# to give the bundle a stable designated requirement, so macOS keeps the Screen
+# Recording grant across rebuilds. Ad-hoc signing cannot do this: its cdhash
+# changes on every build and TCC treats each build as a different app.
+
 CERT_CN="${CERT_CN:-Slimshot Dev}"
-KEYCHAIN="${KEYCHAIN:-$HOME/Library/Keychains/slimshot-dev.keychain-db}"
-KEYCHAIN_PASSWORD="${KEYCHAIN_PASSWORD:-slimshot-dev}"
-P12_PASSWORD="${P12_PASSWORD:-$(openssl rand -hex 16)}"
+KEYCHAIN="${KEYCHAIN:-$HOME/Library/Keychains/slimshot-release.keychain-db}"
+SUPPORT_DIR="$HOME/Library/Application Support/Slimshot"
+PASSWORD_FILE="$SUPPORT_DIR/signing.keychain-password"
 DAYS="${DAYS:-3650}"
 
-if security find-certificate -c "$CERT_CN" "$KEYCHAIN" >/dev/null 2>&1; then
-    echo "identity already exists: $CERT_CN"
-    security find-identity -p codesigning "$KEYCHAIN" || true
+# Deliberately not `find-identity -v`: a self-signed certificate is reported as
+# untrusted (CSSMERR_TP_NOT_TRUSTED) and `-v` filters those out, so `-v` would
+# always say "no identity" and this script would mint a new certificate on every
+# run. Each new certificate changes the designated requirement and therefore
+# throws away the Screen Recording grant.
+active_identity_count() {
+    security find-identity -p codesigning "$KEYCHAIN" 2>/dev/null |
+        grep -c ")$" || true
+}
+
+if [ "$(active_identity_count)" -gt 0 ]; then
+    echo "identity already usable: $CERT_CN"
+    echo "keychain: $KEYCHAIN"
     exit 0
 fi
+
+mkdir -p "$SUPPORT_DIR"
+chmod 700 "$SUPPORT_DIR"
+
+# Reuse the previous keychain password if we have one, otherwise generate a
+# random one and remember it, so `make` can unlock the keychain unattended.
+if [ -f "$KEYCHAIN" ] && [ -f "$PASSWORD_FILE" ]; then
+    KEYCHAIN_PASSWORD="$(cat "$PASSWORD_FILE")"
+elif [ -f "$KEYCHAIN" ]; then
+    echo "error: $KEYCHAIN exists but its password is unknown." >&2
+    echo "       move it aside and run this script again:" >&2
+    echo "       mv \"$KEYCHAIN\" \"$KEYCHAIN.bak\"" >&2
+    exit 1
+else
+    KEYCHAIN_PASSWORD="${KEYCHAIN_PASSWORD:-$(openssl rand -hex 16)}"
+fi
+
+P12_PASSWORD="$(openssl rand -hex 16)"
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -52,14 +87,27 @@ security set-keychain-settings -lut 21600 "$KEYCHAIN"
 security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
 security import "$TMP/cert.p12" -k "$KEYCHAIN" -P "$P12_PASSWORD" \
     -T /usr/bin/codesign -T /usr/bin/security >/dev/null
-security set-key-partition-list -S apple-tool:,apple: -s \
+security set-key-partition-list -S apple-tool:,apple:,codesign: -s \
     -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
 
+printf '%s' "$KEYCHAIN_PASSWORD" > "$PASSWORD_FILE"
+chmod 600 "$PASSWORD_FILE"
+
+# codesign only looks at keychains in the user search list unless --keychain is
+# passed, and `make` should not need a password on every build.
+existing_list="$(security list-keychains -d user | sed -e 's/^[[:space:]]*//' -e 's/"//g')"
+if ! printf '%s\n' "$existing_list" | grep -Fxq "$KEYCHAIN"; then
+    # shellcheck disable=SC2086
+    security list-keychains -d user -s "$KEYCHAIN" $existing_list >/dev/null
+fi
+
 echo "created identity: $CERT_CN"
-security find-identity -p codesigning "$KEYCHAIN" || true
+echo "keychain: $KEYCHAIN"
+security find-identity -p codesigning "$KEYCHAIN" | grep "$CERT_CN" || true
 echo
-echo "Use:"
+echo "Now a plain \`make\` signs with this identity automatically."
+echo "If you need to force it explicitly:"
 echo "  CODESIGN_IDENTITY=\"$CERT_CN\" CODESIGN_KEYCHAIN=\"$KEYCHAIN\" make"
 echo
-echo "The certificate is self-signed and not trusted by Gatekeeper."
-echo "That is expected; install.command clears the quarantine attribute."
+echo "The certificate is self-signed, so Gatekeeper does not trust it."
+echo "That is expected: install.command clears the quarantine attribute."

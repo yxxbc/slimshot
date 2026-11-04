@@ -7,8 +7,11 @@
 "menu.plugins.empty" = "No plugins found";
 "menu.plugins.no_capture" = "Capture something first";
 "menu.permission.status.granted" = "Screen Recording: Granted";
-"menu.permission.status.denied" = "Screen Recording: Not Granted";
+"menu.permission.status.denied" = "Screen Recording: Denied";
+"menu.permission.status.unknown" = "Screen Recording: Not Requested";
 "menu.permission" = "Screen Recording Permission…";
+"menu.permission.settings" = "Open System Settings (Privacy & Security)…";
+"menu.permission.request" = "Allow Screen Recording…";
 "menu.settings" = "Settings…";
 "menu.check_updates" = "Check for Updates…";
 "menu.about" = "About Slimshot";
@@ -43,12 +46,15 @@
 "settings.open_config" = "Open Config Folder";
 "settings.config.section" = "Configuration";
 "settings.config_path_label" = "Config file";
-"settings.permission" = "Screen Recording Permission…";
+"settings.permission" = "Open System Settings…";
+"settings.permission.request" = "Allow Screen Recording…";
 "settings.permission.section" = "Permission";
 "settings.permission.label" = "Screen Recording";
 "settings.permission.status.granted" = "Allowed";
-"settings.permission.status.denied" = "Not allowed";
-"settings.permission.restart" = "Restart Slimshot after changing this permission.";
+"settings.permission.status.denied" = "Denied";
+"settings.permission.status.unknown" = "Not requested";
+"settings.permission.restart" = "Reopen Slimshot after changing this permission.";
+"settings.permission.requesting" = "Waiting for system approval…";
 "settings.hotkeys.section" = "Current Hotkeys";
 "settings.hotkeys.fullscreen" = "Full screen";
 "settings.hotkeys.window" = "Window";
@@ -62,14 +68,11 @@
 "settings.plugins.hint" = "Run plugins from the menu bar Plugins menu; drop new ones into the folder above.";
 
 "alert.permission.title" = "Screen Recording Permission Required";
-"alert.permission.body" = "Slimshot needs Screen Recording permission to capture your screen. Open System Settings → Privacy & Security → Screen & System Audio Recording, enable Slimshot, then relaunch the app.";
+"alert.permission.body" = "Turn on Slimshot in System Settings → Privacy & Security → Screen & System Audio Recording, then reopen Slimshot.";
 "alert.permission.open" = "Open System Settings";
-"alert.permission.request" = "Request Permission";
 "alert.permission.later" = "Later";
 "alert.permission.granted.title" = "Screen Recording Permission";
 "alert.permission.granted.body" = "Screen Recording permission is granted.";
-"alert.capture.title" = "Capture";
-"alert.capture.body" = "%@ will be implemented in M1. M0 only validates the menu bar, configuration, and permission flow.";
 "alert.save_failed.title" = "Could Not Save Configuration";
 "alert.ok" = "OK";
 
@@ -92,6 +95,7 @@
 "capture.error.invalid_window_size" = "The window reported an invalid size.";
 "capture.error.window_overlay_failed" = "Could not create the window selection overlay.";
 "capture.error.unknown" = "Unknown capture error.";
+"capture.error.permission" = "Screen Recording permission is off. Turn on Slimshot in System Settings → Privacy & Security → Screen & System Audio Recording, then reopen Slimshot.";
 
 "output.error.save_directory" = "Could not resolve the save directory.";
 "output.error.create_directory" = "Could not create %s: %s";
