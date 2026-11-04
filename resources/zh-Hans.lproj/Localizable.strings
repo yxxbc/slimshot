@@ -21,6 +21,10 @@
 "settings.choose" = "选择…";
 "settings.open_config" = "打开配置目录";
 "settings.permission" = "屏幕录制权限…";
+"settings.permission.section" = "权限";
+"settings.permission.status.granted" = "屏幕录制：已授权";
+"settings.permission.status.denied" = "屏幕录制：未授权";
+"settings.permission.restart" = "更改权限后需要重新启动 Slimshot。";
 "settings.close" = "关闭";
 
 "alert.permission.title" = "需要屏幕录制权限";

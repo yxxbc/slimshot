@@ -21,6 +21,10 @@
 "settings.choose" = "Choose…";
 "settings.open_config" = "Open Config Folder";
 "settings.permission" = "Screen Recording Permission…";
+"settings.permission.section" = "Permission";
+"settings.permission.status.granted" = "Screen Recording: allowed";
+"settings.permission.status.denied" = "Screen Recording: not allowed";
+"settings.permission.restart" = "Restart Slimshot after changing this permission.";
 "settings.close" = "Close";
 
 "alert.permission.title" = "Screen Recording Permission Required";

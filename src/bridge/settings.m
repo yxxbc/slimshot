@@ -21,11 +21,12 @@
     NSButton *_thumbnailCheck;
     NSPopUpButton *_formatPopup;
     NSTextField *_folderLabel;
+    NSTextField *_permissionStatusLabel;
 }
 
 - (instancetype)initWithConfig:(slim_config_t *)config {
     NSWindow *window = [[NSWindow alloc]
-        initWithContentRect:NSMakeRect(0, 0, 520, 430)
+        initWithContentRect:NSMakeRect(0, 0, 520, 500)
                   styleMask:(NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
                              NSWindowStyleMaskMiniaturizable)
                     backing:NSBackingStoreBuffered
@@ -39,8 +40,16 @@
         [self buildUI];
         [self refreshControls];
         [window center];
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                 selector:@selector(applicationDidBecomeActive:)
+                                                     name:NSApplicationDidBecomeActiveNotification
+                                                   object:nil];
     }
     return self;
+}
+
+- (void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
 - (NSTextField *)sectionLabel:(NSString *)text {
@@ -121,19 +130,42 @@
     folderRow.spacing = 8.0;
     [stack addArrangedSubview:folderRow];
 
-    NSButton *openConfigButton =
-        [NSButton buttonWithTitle:NSLocalizedString(@"settings.open_config", nil)
-                           target:self
-                           action:@selector(openConfigFolder:)];
+    NSBox *permissionSeparator = [[NSBox alloc] init];
+    permissionSeparator.boxType = NSBoxSeparator;
+    [stack addArrangedSubview:permissionSeparator];
+    [permissionSeparator.widthAnchor constraintEqualToAnchor:stack.widthAnchor].active = YES;
+
+    [stack addArrangedSubview:[self sectionLabel:NSLocalizedString(@"settings.permission.section", nil)]];
+
+    _permissionStatusLabel = [NSTextField labelWithString:@""];
+    _permissionStatusLabel.font = [NSFont systemFontOfSize:13.0 weight:NSFontWeightMedium];
+
     NSButton *permissionButton =
         [NSButton buttonWithTitle:NSLocalizedString(@"settings.permission", nil)
                            target:self
                            action:@selector(openPermissionSettings:)];
+    NSStackView *permissionRow =
+        [NSStackView stackViewWithViews:@[ _permissionStatusLabel, permissionButton ]];
+    permissionRow.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    permissionRow.alignment = NSLayoutAttributeCenterY;
+    permissionRow.spacing = 12.0;
+    [stack addArrangedSubview:permissionRow];
+
+    NSTextField *permissionHint =
+        [NSTextField labelWithString:NSLocalizedString(@"settings.permission.restart", nil)];
+    permissionHint.font = [NSFont systemFontOfSize:11.0];
+    permissionHint.textColor = [NSColor secondaryLabelColor];
+    [stack addArrangedSubview:permissionHint];
+
+    NSButton *openConfigButton =
+        [NSButton buttonWithTitle:NSLocalizedString(@"settings.open_config", nil)
+                           target:self
+                           action:@selector(openConfigFolder:)];
     NSButton *closeButton = [NSButton buttonWithTitle:NSLocalizedString(@"settings.close", nil)
                                                target:self
                                                action:@selector(closeWindow:)];
     NSStackView *buttonRow =
-        [NSStackView stackViewWithViews:@[ openConfigButton, permissionButton, closeButton ]];
+        [NSStackView stackViewWithViews:@[ openConfigButton, closeButton ]];
     buttonRow.orientation = NSUserInterfaceLayoutOrientationHorizontal;
     buttonRow.alignment = NSLayoutAttributeCenterY;
     buttonRow.spacing = 8.0;
@@ -162,6 +194,23 @@
     [_formatPopup selectItemAtIndex:(index == NSNotFound) ? 0 : (NSInteger)index];
 
     [self updateFolderLabel];
+    [self refreshPermissionStatus];
+}
+
+- (void)refreshPermissionStatus {
+    BOOL granted = slim_screen_capture_authorized();
+    _permissionStatusLabel.stringValue = NSLocalizedString(
+        granted ? @"settings.permission.status.granted"
+                : @"settings.permission.status.denied", nil);
+    _permissionStatusLabel.textColor =
+        granted ? [NSColor systemGreenColor] : [NSColor systemOrangeColor];
+}
+
+- (void)applicationDidBecomeActive:(NSNotification *)notification {
+    (void)notification;
+    if (self.window.isVisible) {
+        [self refreshPermissionStatus];
+    }
 }
 
 - (void)updateFolderLabel {
@@ -267,6 +316,7 @@
 
 - (void)present {
     [NSApp activateIgnoringOtherApps:YES];
+    [self refreshPermissionStatus];
     [self.window makeKeyAndOrderFront:nil];
 }
 
