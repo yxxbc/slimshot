@@ -297,6 +297,8 @@
                                                keyEquivalent:@""];
         item.target = self;
         item.representedObject = plugin.identifier;
+        item.image = [NSImage imageWithSystemSymbolName:plugin.iconName
+                              accessibilityDescription:plugin.name];
         if (plugin.type == SLIM_PLUGIN_POST_PROCESS && !hasCapture) {
             item.enabled = NO;
             item.toolTip = NSLocalizedString(@"menu.plugins.no_capture", nil);

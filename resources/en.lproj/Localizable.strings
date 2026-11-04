@@ -77,6 +77,9 @@
 "alert.output_failed.title" = "Could Not Save Screenshot";
 "overlay.capture" = "✓ Capture";
 "overlay.cancel" = "× Cancel";
+"overlay.capture.tooltip" = "Capture (Return)";
+"overlay.cancel.tooltip" = "Cancel (Esc)";
+"overlay.more" = "More Plugins…";
 "overlay.hint.region" = "Drag to select · Click a window to capture · Esc to cancel";
 "overlay.hint.window" = "Click a window to capture · Esc to cancel";
 

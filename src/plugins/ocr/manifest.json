@@ -2,6 +2,7 @@
   "id": "ocr",
   "name": "OCR",
   "version": "0.1.0",
+  "icon": "text.viewfinder",
   "type": "post-process",
   "exec": "ocr",
   "timeout_ms": 15000

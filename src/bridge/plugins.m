@@ -85,6 +85,9 @@
         plugin.identifier = [NSString stringWithUTF8String:item->id];
         plugin.name = [NSString stringWithUTF8String:item->name];
         plugin.version = [NSString stringWithUTF8String:item->version];
+        plugin.iconName = (item->icon[0] != '\0')
+                              ? [NSString stringWithUTF8String:item->icon]
+                              : @"puzzlepiece.extension";
         plugin.type = item->type;
         plugin.execPath = [NSString stringWithUTF8String:item->exec_path];
         plugin.timeoutMs = item->timeout_ms;

@@ -97,8 +97,9 @@ SLIMSHOT_CAPTURE_ON_LAUNCH=full ./build/Slimshot.app/Contents/MacOS/Slimshot
 
 菜单栏 →「插件」：对最近一次截图运行插件。没有截图时 `post-process` 插件置灰。
 
-- 区域框选后的操作条会直接显示插件入口，点一下完成截图并立即运行
-- 全屏/窗口截图后的浮动缩略图底部也有插件按钮，不用再进菜单
+- 区域框选后，选区右侧的垂直操作轨显示插件图标（最多 4 个 + 「…」溢出），点一下完成截图并立即运行
+- 插件按钮带 tooltip；数字键 `1`–`9` 直接运行，`Return` 截图，`Esc` 取消
+- 全屏/窗口截图后的浮动缩略图也显示插件图标
 - 内置 **OCR**：使用 Vision 识别中英文，结果自动复制到剪贴板并提示字符数
 - 内置 **Editor**：在独立窗口里拖拽画红框，保存并复制编辑后的图片
 - 用户插件目录：`~/Library/Application Support/Slimshot/Plugins/<id>/`
@@ -190,7 +191,7 @@ vendor/          Sparkle 由 make sparkle 拉取（gitignore）
 resources/       Info.plist、中英文 strings、icon（PNG + icns）
 tests/           配置、命名、插件测试
 scripts/         构建、签名、证书、打包、安装、Sparkle 拉取、appcast
-docs/            设计笔记：覆盖层坐标系、界面布局、插件协议、发布流程
+docs/            设计笔记：覆盖层坐标系、界面布局、选区 UI、插件协议、发布流程
 ```
 
 ## 设计文档
@@ -198,6 +199,7 @@ docs/            设计笔记：覆盖层坐标系、界面布局、插件协议
 - [跨屏覆盖层与坐标系](docs/cross-screen-overlay.md)：多显示器、Retina、负坐标下的覆盖层设计与事故复盘
 - [设置与关于界面布局](docs/ui-layout.md)：间距、对齐、窗口结构和控件顺序
 - [插件](docs/plugins.md)：目录、manifest、stdin/stdout 协议、OCR 参考插件和信任模型
+- [选区操作 UI 与插件位](docs/selection-ui.md)：开源截图工具调研、垂直操作轨、溢出和快捷键
 - [发布与自动更新](docs/release.md)：Sparkle 密钥、GitHub Actions secrets、tag 发布流程
 
 ## 路线图

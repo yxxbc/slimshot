@@ -2,6 +2,7 @@
   "id": "editor",
   "name": "Editor",
   "version": "0.1.0",
+  "icon": "pencil.tip.crop.circle",
   "type": "post-process",
   "exec": "editor",
   "timeout_ms": 600000

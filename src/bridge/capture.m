@@ -284,7 +284,8 @@
         if (plugin.type == SLIM_PLUGIN_POST_PROCESS) {
             [pluginActions addObject:
                 [SlimOverlayPluginAction actionWithIdentifier:plugin.identifier
-                                                        title:plugin.name]];
+                                                        title:plugin.name
+                                                     iconName:plugin.iconName]];
         }
     }
 

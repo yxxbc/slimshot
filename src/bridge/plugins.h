@@ -16,6 +16,7 @@
 @property (nonatomic, copy) NSString *identifier;
 @property (nonatomic, copy) NSString *name;
 @property (nonatomic, copy) NSString *version;
+@property (nonatomic, copy) NSString *iconName;
 @property (nonatomic, assign) slim_plugin_type_t type;
 @property (nonatomic, copy) NSString *execPath;
 @property (nonatomic, assign) int timeoutMs;

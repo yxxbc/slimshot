@@ -129,6 +129,7 @@ static int load_manifest(const char *plugin_dir, const char *manifest_path,
     cJSON *id = cJSON_GetObjectItemCaseSensitive(root, "id");
     cJSON *name = cJSON_GetObjectItemCaseSensitive(root, "name");
     cJSON *version = cJSON_GetObjectItemCaseSensitive(root, "version");
+    cJSON *icon = cJSON_GetObjectItemCaseSensitive(root, "icon");
     cJSON *type = cJSON_GetObjectItemCaseSensitive(root, "type");
     cJSON *exec = cJSON_GetObjectItemCaseSensitive(root, "exec");
     cJSON *timeout = cJSON_GetObjectItemCaseSensitive(root, "timeout_ms");
@@ -146,6 +147,9 @@ static int load_manifest(const char *plugin_dir, const char *manifest_path,
                             ? version->valuestring
                             : "0.0.0") == 0 &&
             copy_string(plugin.directory, sizeof plugin.directory, plugin_dir) == 0) {
+            if (cJSON_IsString(icon) && icon->valuestring[0] != '\0') {
+                (void)copy_string(plugin.icon, sizeof plugin.icon, icon->valuestring);
+            }
             if (strcmp(type->valuestring, "post-process") == 0) {
                 plugin.type = SLIM_PLUGIN_POST_PROCESS;
             } else if (strcmp(type->valuestring, "standalone") == 0) {

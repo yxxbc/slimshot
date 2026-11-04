@@ -37,6 +37,7 @@ M_SRCS := \
 	src/bridge/capture_composite.m \
 	src/bridge/hotkeys.m \
 	src/bridge/output.m \
+	src/bridge/overlay_action_rail.m \
 	src/bridge/overlay_capture.m \
 	src/bridge/overlay_controller.m \
 	src/bridge/overlay_view.m \

@@ -25,7 +25,10 @@ typedef NS_ENUM(NSInteger, SlimOverlayMode) {
 @interface SlimOverlayPluginAction : NSObject
 @property (nonatomic, copy) NSString *identifier;
 @property (nonatomic, copy) NSString *title;
-+ (instancetype)actionWithIdentifier:(NSString *)identifier title:(NSString *)title;
+@property (nonatomic, copy) NSString *iconName;
++ (instancetype)actionWithIdentifier:(NSString *)identifier
+                               title:(NSString *)title
+                            iconName:(NSString *)iconName;
 @end
 
 @interface SlimOverlayController : NSObject

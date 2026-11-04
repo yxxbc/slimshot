@@ -36,10 +36,13 @@
 @end
 
 @implementation SlimOverlayPluginAction
-+ (instancetype)actionWithIdentifier:(NSString *)identifier title:(NSString *)title {
++ (instancetype)actionWithIdentifier:(NSString *)identifier
+                               title:(NSString *)title
+                            iconName:(NSString *)iconName {
     SlimOverlayPluginAction *action = [[self alloc] init];
     action.identifier = identifier;
     action.title = title;
+    action.iconName = iconName;
     return action;
 }
 @end

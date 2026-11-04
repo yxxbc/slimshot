@@ -45,22 +45,40 @@
 
         if (_plugins.count > 0) {
             CGFloat x = 8.0;
-            NSDictionary *attributes =
-                @{ NSFontAttributeName : [NSFont systemFontOfSize:11.0] };
-            for (SlimPlugin *plugin in _plugins) {
+            NSUInteger visible = MIN(_plugins.count, (NSUInteger)4);
+            for (NSUInteger i = 0; i < visible; i++) {
+                SlimPlugin *plugin = _plugins[i];
                 NSButton *button =
                     [NSButton buttonWithTitle:plugin.name
                                        target:self
                                        action:@selector(pluginButtonClicked:)];
                 button.bezelStyle = NSBezelStyleRounded;
                 button.controlSize = NSControlSizeSmall;
-                button.font = [NSFont systemFontOfSize:11.0];
+                button.image = [NSImage imageWithSystemSymbolName:plugin.iconName
+                                          accessibilityDescription:plugin.name];
+                button.imagePosition = NSImageOnly;
+                button.contentTintColor = [NSColor labelColor];
                 button.identifier = plugin.identifier;
-                CGFloat width =
-                    MAX(44.0, [plugin.name sizeWithAttributes:attributes].width + 16.0);
-                button.frame = NSMakeRect(x, 6.0, width, 22.0);
+                button.toolTip = plugin.name;
+                button.frame = NSMakeRect(x, 6.0, 30.0, 22.0);
                 [self addSubview:button];
-                x += width + 6.0;
+                x += 34.0;
+            }
+            if (_plugins.count > visible) {
+                NSButton *more =
+                    [NSButton buttonWithTitle:NSLocalizedString(@"overlay.more", nil)
+                                       target:self
+                                       action:@selector(overflowPressed:)];
+                more.bezelStyle = NSBezelStyleRounded;
+                more.controlSize = NSControlSizeSmall;
+                more.image = [NSImage imageWithSystemSymbolName:@"ellipsis"
+                                        accessibilityDescription:
+                                            NSLocalizedString(@"overlay.more", nil)];
+                more.imagePosition = NSImageOnly;
+                more.contentTintColor = [NSColor labelColor];
+                more.toolTip = NSLocalizedString(@"overlay.more", nil);
+                more.frame = NSMakeRect(x, 6.0, 30.0, 22.0);
+                [self addSubview:more];
             }
         }
     }
@@ -133,7 +151,10 @@
 }
 
 - (void)pluginButtonClicked:(NSButton *)sender {
-    NSString *identifier = sender.identifier;
+    [self runPluginWithIdentifier:sender.identifier];
+}
+
+- (void)runPluginWithIdentifier:(NSString *)identifier {
     SlimPluginManager *manager = [SlimPluginManager sharedManager];
     SlimPlugin *plugin = [manager pluginWithIdentifier:identifier];
     if (plugin == nil) {
@@ -143,6 +164,28 @@
     [manager runPlugin:plugin completion:^(BOOL ok, NSString *message) {
         SlimPresentPluginResult(ok, plugin.name, message);
     }];
+}
+
+- (void)overflowPressed:(NSButton *)sender {
+    NSMenu *menu = [[NSMenu alloc] initWithTitle:@""];
+    for (SlimPlugin *plugin in _plugins) {
+        NSMenuItem *item =
+            [[NSMenuItem alloc] initWithTitle:plugin.name
+                                       action:@selector(overflowSelected:)
+                                keyEquivalent:@""];
+        item.target = self;
+        item.representedObject = plugin.identifier;
+        item.image = [NSImage imageWithSystemSymbolName:plugin.iconName
+                              accessibilityDescription:plugin.name];
+        [menu addItem:item];
+    }
+    NSPoint location = NSMakePoint(NSMinX(sender.frame),
+                                   NSMaxY(sender.frame) + 4.0);
+    [menu popUpMenuPositioningItem:nil atLocation:location inView:self];
+}
+
+- (void)overflowSelected:(NSMenuItem *)sender {
+    [self runPluginWithIdentifier:sender.representedObject];
 }
 
 - (void)rightMouseDown:(NSEvent *)event {
@@ -207,13 +250,12 @@ void slim_thumbnail_show(CGImageRef image, NSScreen *screen, NSString *filePath,
             [plugins addObject:plugin];
         }
     }
-    NSDictionary *buttonAttributes =
-        @{ NSFontAttributeName : [NSFont systemFontOfSize:11.0] };
-    CGFloat rowWidth = 8.0;
-    for (SlimPlugin *plugin in plugins) {
-        rowWidth += MAX(44.0, [plugin.name sizeWithAttributes:buttonAttributes].width + 16.0) +
-                    6.0;
+    NSUInteger visiblePlugins = MIN(plugins.count, (NSUInteger)4);
+    CGFloat rowWidth = 8.0 + (CGFloat)visiblePlugins * 34.0;
+    if (plugins.count > visiblePlugins) {
+        rowWidth += 34.0;
     }
+    rowWidth += 8.0;
 
     CGFloat contentWidth = imageWidth + 12.0;
     if (plugins.count > 0) {

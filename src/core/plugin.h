@@ -15,6 +15,7 @@
 #define SLIM_PLUGIN_ID_MAX 64
 #define SLIM_PLUGIN_NAME_MAX 128
 #define SLIM_PLUGIN_VERSION_MAX 32
+#define SLIM_PLUGIN_ICON_MAX 64
 
 typedef enum {
     SLIM_PLUGIN_POST_PROCESS = 0,
@@ -25,6 +26,7 @@ typedef struct {
     char id[SLIM_PLUGIN_ID_MAX];
     char name[SLIM_PLUGIN_NAME_MAX];
     char version[SLIM_PLUGIN_VERSION_MAX];
+    char icon[SLIM_PLUGIN_ICON_MAX];
     slim_plugin_type_t type;
     char directory[SLIM_PATH_MAX];
     char exec_path[SLIM_PATH_MAX * 2];
