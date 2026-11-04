@@ -201,6 +201,12 @@ NSScreen *screen = [self screenForDisplayID:displayID];
 
 不要只用 `NSEvent.mouseLocation`。它和 `NSScreen.frame` 同属 AppKit 坐标，鼠标在负坐标的副屏上时容易和 CG 空间混用。
 
+### 3.7 安全区：刘海和菜单栏
+
+覆盖窗口是全屏的，但 UI 不能画进刘海里。`SlimTopSafeInset` 读取覆盖窗口所在屏幕的 `NSScreen.safeAreaInsets.top`（本机内置屏是 32pt，外接屏是 0），提示、工具栏和悬停标签都以这个值为最小 y 偏移。标签宽度也限制在屏幕内，超长窗口标题用尾部省略号截断，而不是被 view bounds 裁掉。
+
+不要用固定的 `y=12` 或固定菜单栏高度：`safeAreaInsets` 已经覆盖刘海、菜单栏和不同屏幕配置。
+
 ## 4. 输出合成：按各屏原生分辨率裁剪
 
 冻结图是每屏原生像素，不是统一的 2x。合成逻辑：

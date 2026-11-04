@@ -45,6 +45,11 @@ static NSRect SlimNormalizedRect(NSPoint a, NSPoint b) {
     return NSMakeRect(x, y, width, height);
 }
 
+static CGFloat SlimTopSafeInset(NSView *view) {
+    NSScreen *screen = view.window.screen;
+    return (screen != nil) ? screen.safeAreaInsets.top : 0.0;
+}
+
 @implementation SlimOverlayView {
     NSArray<SlimScreenCapture *> *_captures;
     NSArray<SlimWindowInfo *> *_windows;
@@ -674,12 +679,13 @@ static NSRect SlimNormalizedRect(NSPoint a, NSPoint b) {
                        cancelWidth + padding;
 
     NSRect bounds = self.bounds;
+    CGFloat minY = SlimTopSafeInset(self) + 8.0;
     CGFloat x = NSMinX(_selection);
     CGFloat y = NSMaxY(_selection) + 8.0;
     if (y + barHeight > bounds.size.height - 8.0) {
         y = NSMinY(_selection) - barHeight - 8.0;
     }
-    y = MIN(MAX(y, 8.0), MAX(8.0, bounds.size.height - barHeight - 8.0));
+    y = MIN(MAX(y, minY), MAX(minY, bounds.size.height - barHeight - 8.0));
     x = MIN(MAX(x, 8.0), MAX(8.0, bounds.size.width - barWidth - 8.0));
 
     _toolbarRect = NSMakeRect(x, y, barWidth, barHeight);
@@ -771,17 +777,30 @@ static NSRect SlimNormalizedRect(NSPoint a, NSPoint b) {
     }
     NSDictionary *attributes = [self labelAttributes];
     NSSize textSize = [text sizeWithAttributes:attributes];
-    NSSize labelSize = NSMakeSize(textSize.width + 12.0, textSize.height + 8.0);
     NSRect bounds = self.bounds;
+    CGFloat maxWidth = MAX(40.0, bounds.size.width - 16.0);
+    CGFloat labelWidth = MIN(textSize.width + 12.0, maxWidth);
+    NSSize labelSize = NSMakeSize(labelWidth, textSize.height + 8.0);
+    CGFloat minY = SlimTopSafeInset(self) + 8.0;
     CGFloat maxX = MAX(8.0, bounds.size.width - labelSize.width - 8.0);
-    CGFloat maxY = MAX(8.0, bounds.size.height - labelSize.height - 8.0);
+    CGFloat maxY = MAX(minY, bounds.size.height - labelSize.height - 8.0);
     CGFloat x = MIN(MAX(point.x, 8.0), maxX);
-    CGFloat y = MIN(MAX(point.y, 8.0), maxY);
+    CGFloat y = MIN(MAX(point.y, minY), maxY);
 
     NSRect background = NSMakeRect(x, y, labelSize.width, labelSize.height);
     [[NSColor colorWithCalibratedWhite:0.0 alpha:0.78] setFill];
     [[NSBezierPath bezierPathWithRoundedRect:background xRadius:5.0 yRadius:5.0] fill];
-    [text drawAtPoint:NSMakePoint(x + 6.0, y + 4.0) withAttributes:attributes];
+
+    NSMutableParagraphStyle *style = [[NSMutableParagraphStyle alloc] init];
+    style.lineBreakMode = NSLineBreakByTruncatingTail;
+    NSMutableDictionary *drawAttributes = [attributes mutableCopy];
+    drawAttributes[NSParagraphStyleAttributeName] = style;
+    NSRect textRect = NSMakeRect(x + 6.0, y + 4.0, labelWidth - 12.0,
+                                 textSize.height);
+    [text drawWithRect:textRect
+               options:(NSStringDrawingUsesLineFragmentOrigin |
+                        NSStringDrawingTruncatesLastVisibleLine)
+            attributes:drawAttributes];
 }
 
 - (void)drawHint {
@@ -799,7 +818,7 @@ static NSRect SlimNormalizedRect(NSPoint a, NSPoint b) {
     NSSize labelSize = NSMakeSize(textSize.width + 12.0, textSize.height + 8.0);
     NSRect area = SlimRectIsValid(_hintRect) ? _hintRect : self.bounds;
     CGFloat x = area.origin.x + (area.size.width - labelSize.width) / 2.0;
-    CGFloat y = area.origin.y + 12.0;
+    CGFloat y = area.origin.y + SlimTopSafeInset(self) + 12.0;
     [self drawLabel:hint atPoint:NSMakePoint(x, y)];
 }
 
