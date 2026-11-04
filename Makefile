@@ -26,10 +26,15 @@ M_SRCS := \
 	src/main.m \
 	src/bridge/app.m \
 	src/bridge/capture.m \
+	src/bridge/capture_composite.m \
 	src/bridge/hotkeys.m \
 	src/bridge/output.m \
-	src/bridge/overlay.m \
+	src/bridge/overlay_capture.m \
+	src/bridge/overlay_controller.m \
+	src/bridge/overlay_view.m \
+	src/bridge/overlay_windows.m \
 	src/bridge/permissions.m \
+	src/bridge/screen_geometry.m \
 	src/bridge/settings.m \
 	src/bridge/thumbnail.m
 

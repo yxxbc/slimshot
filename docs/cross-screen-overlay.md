@@ -1,7 +1,7 @@
 # 跨屏覆盖层与坐标系
 
 > 适用版本：M1 多显示器修复之后（2026-11）
-> 涉及文件：`src/bridge/overlay.m`、`src/bridge/capture.m`
+> 涉及文件：`src/bridge/overlay_controller.m`、`overlay_view.m`、`overlay_windows.m`、`capture.m`、`capture_composite.m`、`screen_geometry.m`
 > 改这块代码之前，先读完本文并跑一遍第 6 节的回归清单。
 
 ## 0. 结论先行
@@ -286,15 +286,25 @@ window hit: local=(..., 小于1080) global=(..., 负数) owner=...
 
 ## 8. 相关代码入口
 
-- `src/bridge/overlay.m`
-  - `SlimScreenGlobalCGRect`：AppKit → CG 翻转
+- `src/bridge/overlay_controller.m`
   - `SlimOverlayController initWithMode:...`：按屏建窗口、`referenceCg`、`selectionBounds`
   - `overlayViewDidChangeSelection:`：全局选区广播与工具栏宿主选择
   - `didSelectRegion:`：local → 全局，交给合成
-  - `windowAtPoint:`：local → 全局后与 CG 原生窗口 rect 命中
   - `show`：按屏打印 `overlay screen N`
+- `src/bridge/overlay_view.m`
+  - `windowAtPoint:`：local → 全局后与 CG 原生窗口 rect 命中
+  - `drawRect:` / `mouseDown:` / `mouseDragged:`：冻结画面绘制与框选交互
+- `src/bridge/overlay_windows.m`
+  - `SlimBuildWindowInfos`：CGWindowList 原生 rect + SCWindow 交叉确认
+  - `SlimOverlayWindow`：可成为 key window 的无边框覆盖窗口
+- `src/bridge/overlay_internal.h`：覆盖层模块之间的私有接口
 - `src/bridge/capture.m`
   - `screenUnderMouse`：CGEvent + `CGGetDisplaysWithPoint` 找屏
-  - `copyCompositeFromCaptures:selection:`：混合 DPI 裁剪、拼接、填黑
-  - `copyCropFromCapture:intersection:screenCg:`：单屏像素裁剪
+  - `presentRegionOverlayWithCaptures:` / `presentWindowOverlayForScreen:`：进入覆盖层
+- `src/bridge/capture_composite.m`
+  - `SlimCopyCompositeFromCaptures`：混合 DPI 裁剪、拼接、填黑
+  - `SlimCopyCropFromCapture`：单屏像素裁剪
+- `src/bridge/screen_geometry.m`
+  - `SlimScreenGlobalCGRect`：AppKit → CG 翻转
+  - `SlimScreenForDisplayID` / `SlimScreenForSCDisplay`：display ID 匹配
 - `src/bridge/overlay.h`：`SlimScreenCapture` 的 CGImage 所有权（retain/release 不归 ARC 管）
