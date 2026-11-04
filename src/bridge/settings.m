@@ -17,6 +17,7 @@
 
 @implementation SettingsWindowController {
     slim_config_t *_config;
+    NSStackView *_rootStack;
     NSButton *_includeCursorCheck;
     NSButton *_copyCheck;
     NSButton *_autoSaveCheck;
@@ -34,7 +35,7 @@
 
 - (instancetype)initWithConfig:(slim_config_t *)config {
     NSWindow *window = [[NSWindow alloc]
-        initWithContentRect:NSMakeRect(0, 0, 520, 540)
+        initWithContentRect:NSMakeRect(0, 0, 560, 600)
                   styleMask:(NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
                              NSWindowStyleMaskMiniaturizable)
                     backing:NSBackingStoreBuffered
@@ -60,31 +61,51 @@
     [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
-- (NSTextField *)sectionLabel:(NSString *)text {
+static const CGFloat kSettingsLabelWidth = 108.0;
+static const CGFloat kSettingsMargin = 24.0;
+
+- (NSTextField *)formLabel:(NSString *)text {
     NSTextField *label = [NSTextField labelWithString:text];
-    label.font = [NSFont boldSystemFontOfSize:13.0];
+    label.alignment = NSTextAlignmentRight;
+    label.font = [NSFont systemFontOfSize:13.0];
+    [label.widthAnchor constraintEqualToConstant:kSettingsLabelWidth].active = YES;
     return label;
 }
 
-- (NSStackView *)rowWithLabel:(NSString *)text control:(NSView *)control {
-    NSTextField *label = [NSTextField labelWithString:text];
-    NSStackView *row = [NSStackView stackViewWithViews:@[ label, control ]];
+- (NSStackView *)formRowWithLabel:(NSString *)text control:(NSView *)control {
+    NSStackView *row = [NSStackView stackViewWithViews:@[ [self formLabel:text], control ]];
     row.orientation = NSUserInterfaceLayoutOrientationHorizontal;
     row.alignment = NSLayoutAttributeCenterY;
-    row.spacing = 8.0;
+    row.spacing = 10.0;
     return row;
 }
 
-- (NSStackView *)qualityRowWithTitle:(NSString *)title
-                              slider:(NSSlider *)slider
-                          valueLabel:(NSTextField *)valueLabel {
-    NSTextField *label = [NSTextField labelWithString:title];
-    [label.widthAnchor constraintEqualToConstant:90.0].active = YES;
-    NSStackView *row = [NSStackView stackViewWithViews:@[ label, slider, valueLabel ]];
-    row.orientation = NSUserInterfaceLayoutOrientationHorizontal;
-    row.alignment = NSLayoutAttributeCenterY;
-    row.spacing = 8.0;
-    return row;
+- (void)addRowToStack:(NSStackView *)stack
+                label:(NSString *)label
+              control:(NSView *)control {
+    NSStackView *row = [self formRowWithLabel:label control:control];
+    [stack addArrangedSubview:row];
+    [row.widthAnchor constraintEqualToAnchor:stack.widthAnchor].active = YES;
+}
+
+- (void)addCheckboxRowToStack:(NSStackView *)stack checkbox:(NSButton *)checkbox {
+    [self addRowToStack:stack label:@"" control:checkbox];
+}
+
+- (void)addSectionHeader:(NSString *)title toStack:(NSStackView *)stack {
+    if (stack.arrangedSubviews.count > 0) {
+        NSBox *separator = [[NSBox alloc] init];
+        separator.boxType = NSBoxSeparator;
+        [stack addArrangedSubview:separator];
+        [separator.widthAnchor constraintEqualToAnchor:stack.widthAnchor].active = YES;
+        [stack setCustomSpacing:16.0 afterView:separator];
+    }
+
+    NSTextField *header = [NSTextField labelWithString:title];
+    header.font = [NSFont systemFontOfSize:12.0 weight:NSFontWeightSemibold];
+    header.textColor = [NSColor secondaryLabelColor];
+    [stack addArrangedSubview:header];
+    [stack setCustomSpacing:10.0 afterView:header];
 }
 
 - (void)buildUI {
@@ -92,74 +113,70 @@
     NSStackView *stack = [NSStackView stackViewWithViews:@[]];
     stack.orientation = NSUserInterfaceLayoutOrientationVertical;
     stack.alignment = NSLayoutAttributeLeading;
-    stack.spacing = 10.0;
+    stack.spacing = 8.0;
     stack.translatesAutoresizingMaskIntoConstraints = NO;
     [content addSubview:stack];
+    _rootStack = stack;
 
     [NSLayoutConstraint activateConstraints:@[
-        [stack.leadingAnchor constraintEqualToAnchor:content.leadingAnchor constant:20.0],
-        [stack.trailingAnchor constraintEqualToAnchor:content.trailingAnchor constant:-20.0],
-        [stack.topAnchor constraintEqualToAnchor:content.topAnchor constant:20.0],
-        [stack.bottomAnchor constraintLessThanOrEqualToAnchor:content.bottomAnchor constant:-20.0],
+        [stack.leadingAnchor constraintEqualToAnchor:content.leadingAnchor
+                                            constant:kSettingsMargin],
+        [stack.trailingAnchor constraintEqualToAnchor:content.trailingAnchor
+                                             constant:-kSettingsMargin],
+        [stack.topAnchor constraintEqualToAnchor:content.topAnchor
+                                        constant:kSettingsMargin],
+        [stack.bottomAnchor constraintLessThanOrEqualToAnchor:content.bottomAnchor
+                                                     constant:-kSettingsMargin],
     ]];
 
-    [stack addArrangedSubview:[self sectionLabel:NSLocalizedString(@"settings.capture_options", nil)]];
-
+    [self addSectionHeader:NSLocalizedString(@"settings.capture_options", nil) toStack:stack];
     _includeCursorCheck = [NSButton checkboxWithTitle:NSLocalizedString(@"settings.include_cursor", nil)
                                                target:self
                                                action:@selector(toggleIncludeCursor:)];
-    [stack addArrangedSubview:_includeCursorCheck];
+    [self addCheckboxRowToStack:stack checkbox:_includeCursorCheck];
 
-    NSBox *captureSeparator = [[NSBox alloc] init];
-    captureSeparator.boxType = NSBoxSeparator;
-    [stack addArrangedSubview:captureSeparator];
-    [captureSeparator.widthAnchor constraintEqualToAnchor:stack.widthAnchor].active = YES;
-
-    [stack addArrangedSubview:[self sectionLabel:NSLocalizedString(@"settings.capture", nil)]];
-
+    [self addSectionHeader:NSLocalizedString(@"settings.capture", nil) toStack:stack];
     _copyCheck = [NSButton checkboxWithTitle:NSLocalizedString(@"settings.copy", nil)
                                       target:self
                                       action:@selector(toggleCopy:)];
-    [stack addArrangedSubview:_copyCheck];
+    [self addCheckboxRowToStack:stack checkbox:_copyCheck];
 
     _autoSaveCheck = [NSButton checkboxWithTitle:NSLocalizedString(@"settings.auto_save", nil)
                                           target:self
                                           action:@selector(toggleAutoSave:)];
-    [stack addArrangedSubview:_autoSaveCheck];
+    [self addCheckboxRowToStack:stack checkbox:_autoSaveCheck];
 
     _thumbnailCheck = [NSButton checkboxWithTitle:NSLocalizedString(@"settings.thumbnail", nil)
                                            target:self
                                            action:@selector(toggleThumbnail:)];
-    [stack addArrangedSubview:_thumbnailCheck];
+    [self addCheckboxRowToStack:stack checkbox:_thumbnailCheck];
 
-    _thumbnailSecondsLabel = [NSTextField labelWithString:@""];
     _thumbnailStepper = [[NSStepper alloc] init];
     _thumbnailStepper.minValue = 0;
     _thumbnailStepper.maxValue = 60;
     _thumbnailStepper.increment = 1;
     _thumbnailStepper.target = self;
     _thumbnailStepper.action = @selector(thumbnailSecondsChanged:);
-    NSStackView *secondsRow =
-        [NSStackView stackViewWithViews:@[ _thumbnailSecondsLabel, _thumbnailStepper ]];
-    secondsRow.orientation = NSUserInterfaceLayoutOrientationHorizontal;
-    secondsRow.alignment = NSLayoutAttributeCenterY;
-    secondsRow.spacing = 8.0;
-    secondsRow.edgeInsets = NSEdgeInsetsMake(0.0, 20.0, 0.0, 0.0);
-    [stack addArrangedSubview:secondsRow];
+    _thumbnailSecondsLabel = [NSTextField labelWithString:@""];
+    _thumbnailSecondsLabel.font = [NSFont systemFontOfSize:12.0];
+    _thumbnailSecondsLabel.textColor = [NSColor secondaryLabelColor];
+    NSStackView *secondsControl =
+        [NSStackView stackViewWithViews:@[ _thumbnailStepper, _thumbnailSecondsLabel ]];
+    secondsControl.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    secondsControl.alignment = NSLayoutAttributeCenterY;
+    secondsControl.spacing = 8.0;
+    [self addRowToStack:stack
+                  label:NSLocalizedString(@"settings.thumbnail_seconds_label", nil)
+                control:secondsControl];
 
-    NSBox *separator = [[NSBox alloc] init];
-    separator.boxType = NSBoxSeparator;
-    [stack addArrangedSubview:separator];
-    [separator.widthAnchor constraintEqualToAnchor:stack.widthAnchor].active = YES;
-
-    [stack addArrangedSubview:[self sectionLabel:NSLocalizedString(@"settings.output", nil)]];
-
+    [self addSectionHeader:NSLocalizedString(@"settings.output", nil) toStack:stack];
     _formatPopup = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
     [_formatPopup addItemsWithTitles:@[ @"PNG", @"JPEG", @"HEIC", @"TIFF" ]];
     _formatPopup.target = self;
     _formatPopup.action = @selector(formatChanged:);
-    [stack addArrangedSubview:[self rowWithLabel:NSLocalizedString(@"settings.format", nil)
-                                         control:_formatPopup]];
+    [self addRowToStack:stack
+                  label:NSLocalizedString(@"settings.format", nil)
+                control:_formatPopup];
 
     _jpegSlider = [NSSlider sliderWithValue:_config->jpeg_quality
                                    minValue:1.0
@@ -167,13 +184,20 @@
                                      target:self
                                      action:@selector(jpegQualityChanged:)];
     _jpegSlider.continuous = NO;
-    [_jpegSlider.widthAnchor constraintEqualToConstant:180.0].active = YES;
+    [_jpegSlider.widthAnchor constraintEqualToConstant:200.0].active = YES;
     _jpegValueLabel = [NSTextField labelWithString:@""];
     _jpegValueLabel.alignment = NSTextAlignmentRight;
+    _jpegValueLabel.font = [NSFont monospacedDigitSystemFontOfSize:12.0
+                                                           weight:NSFontWeightRegular];
     [_jpegValueLabel.widthAnchor constraintEqualToConstant:32.0].active = YES;
-    [stack addArrangedSubview:[self qualityRowWithTitle:NSLocalizedString(@"settings.quality.jpeg", nil)
-                                                slider:_jpegSlider
-                                            valueLabel:_jpegValueLabel]];
+    NSStackView *jpegControl =
+        [NSStackView stackViewWithViews:@[ _jpegSlider, _jpegValueLabel ]];
+    jpegControl.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    jpegControl.alignment = NSLayoutAttributeCenterY;
+    jpegControl.spacing = 8.0;
+    [self addRowToStack:stack
+                  label:NSLocalizedString(@"settings.quality.jpeg", nil)
+                control:jpegControl];
 
     _heicSlider = [NSSlider sliderWithValue:_config->heic_quality
                                    minValue:1.0
@@ -181,56 +205,67 @@
                                      target:self
                                      action:@selector(heicQualityChanged:)];
     _heicSlider.continuous = NO;
-    [_heicSlider.widthAnchor constraintEqualToConstant:180.0].active = YES;
+    [_heicSlider.widthAnchor constraintEqualToConstant:200.0].active = YES;
     _heicValueLabel = [NSTextField labelWithString:@""];
     _heicValueLabel.alignment = NSTextAlignmentRight;
+    _heicValueLabel.font = [NSFont monospacedDigitSystemFontOfSize:12.0
+                                                           weight:NSFontWeightRegular];
     [_heicValueLabel.widthAnchor constraintEqualToConstant:32.0].active = YES;
-    [stack addArrangedSubview:[self qualityRowWithTitle:NSLocalizedString(@"settings.quality.heic", nil)
-                                                slider:_heicSlider
-                                            valueLabel:_heicValueLabel]];
+    NSStackView *heicControl =
+        [NSStackView stackViewWithViews:@[ _heicSlider, _heicValueLabel ]];
+    heicControl.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    heicControl.alignment = NSLayoutAttributeCenterY;
+    heicControl.spacing = 8.0;
+    [self addRowToStack:stack
+                  label:NSLocalizedString(@"settings.quality.heic", nil)
+                control:heicControl];
 
     _folderLabel = [NSTextField labelWithString:@""];
     _folderLabel.lineBreakMode = NSLineBreakByTruncatingMiddle;
     _folderLabel.maximumNumberOfLines = 1;
+    _folderLabel.font = [NSFont systemFontOfSize:12.0];
+    _folderLabel.textColor = [NSColor secondaryLabelColor];
+    [_folderLabel setContentHuggingPriority:NSLayoutPriorityDefaultLow
+                             forOrientation:NSLayoutConstraintOrientationHorizontal];
     [_folderLabel setContentCompressionResistancePriority:NSLayoutPriorityDefaultLow
                                            forOrientation:NSLayoutConstraintOrientationHorizontal];
-    [_folderLabel.widthAnchor constraintGreaterThanOrEqualToConstant:340.0].active = YES;
+    [_folderLabel.widthAnchor constraintGreaterThanOrEqualToConstant:220.0].active = YES;
 
     NSButton *chooseButton = [NSButton buttonWithTitle:NSLocalizedString(@"settings.choose", nil)
                                                 target:self
                                                 action:@selector(chooseFolder:)];
-    NSStackView *folderRow = [NSStackView stackViewWithViews:@[ _folderLabel, chooseButton ]];
-    folderRow.orientation = NSUserInterfaceLayoutOrientationHorizontal;
-    folderRow.alignment = NSLayoutAttributeCenterY;
-    folderRow.spacing = 8.0;
-    [stack addArrangedSubview:folderRow];
+    NSStackView *folderControl =
+        [NSStackView stackViewWithViews:@[ _folderLabel, chooseButton ]];
+    folderControl.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    folderControl.alignment = NSLayoutAttributeCenterY;
+    folderControl.spacing = 8.0;
+    [folderControl setContentHuggingPriority:NSLayoutPriorityDefaultLow
+                              forOrientation:NSLayoutConstraintOrientationHorizontal];
+    [self addRowToStack:stack
+                  label:NSLocalizedString(@"settings.folder_label", nil)
+                control:folderControl];
 
-    NSBox *permissionSeparator = [[NSBox alloc] init];
-    permissionSeparator.boxType = NSBoxSeparator;
-    [stack addArrangedSubview:permissionSeparator];
-    [permissionSeparator.widthAnchor constraintEqualToAnchor:stack.widthAnchor].active = YES;
-
-    [stack addArrangedSubview:[self sectionLabel:NSLocalizedString(@"settings.permission.section", nil)]];
-
+    [self addSectionHeader:NSLocalizedString(@"settings.permission.section", nil) toStack:stack];
     _permissionStatusLabel = [NSTextField labelWithString:@""];
     _permissionStatusLabel.font = [NSFont systemFontOfSize:13.0 weight:NSFontWeightMedium];
-
     NSButton *permissionButton =
         [NSButton buttonWithTitle:NSLocalizedString(@"settings.permission", nil)
                            target:self
                            action:@selector(openPermissionSettings:)];
-    NSStackView *permissionRow =
+    NSStackView *permissionControl =
         [NSStackView stackViewWithViews:@[ _permissionStatusLabel, permissionButton ]];
-    permissionRow.orientation = NSUserInterfaceLayoutOrientationHorizontal;
-    permissionRow.alignment = NSLayoutAttributeCenterY;
-    permissionRow.spacing = 12.0;
-    [stack addArrangedSubview:permissionRow];
+    permissionControl.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    permissionControl.alignment = NSLayoutAttributeCenterY;
+    permissionControl.spacing = 12.0;
+    [self addRowToStack:stack
+                  label:NSLocalizedString(@"settings.permission.label", nil)
+                control:permissionControl];
 
     NSTextField *permissionHint =
         [NSTextField labelWithString:NSLocalizedString(@"settings.permission.restart", nil)];
     permissionHint.font = [NSFont systemFontOfSize:11.0];
     permissionHint.textColor = [NSColor secondaryLabelColor];
-    [stack addArrangedSubview:permissionHint];
+    [self addRowToStack:stack label:@"" control:permissionHint];
 
     NSButton *openConfigButton =
         [NSButton buttonWithTitle:NSLocalizedString(@"settings.open_config", nil)
@@ -239,21 +274,36 @@
     NSButton *closeButton = [NSButton buttonWithTitle:NSLocalizedString(@"settings.close", nil)
                                                target:self
                                                action:@selector(closeWindow:)];
+    NSView *spacer = [[NSView alloc] init];
+    [spacer setContentHuggingPriority:NSLayoutPriorityDefaultLow
+                       forOrientation:NSLayoutConstraintOrientationHorizontal];
     NSStackView *buttonRow =
-        [NSStackView stackViewWithViews:@[ openConfigButton, closeButton ]];
+        [NSStackView stackViewWithViews:@[ openConfigButton, spacer, closeButton ]];
     buttonRow.orientation = NSUserInterfaceLayoutOrientationHorizontal;
     buttonRow.alignment = NSLayoutAttributeCenterY;
     buttonRow.spacing = 8.0;
+    buttonRow.distribution = NSStackViewDistributionFill;
     [stack addArrangedSubview:buttonRow];
+    [buttonRow.widthAnchor constraintEqualToAnchor:stack.widthAnchor].active = YES;
 
     char configPath[SLIM_PATH_MAX];
     if (slim_paths_config(configPath, sizeof configPath) == 0) {
+        NSString *path = [NSString stringWithUTF8String:configPath];
         NSTextField *pathLabel = [NSTextField labelWithString:
-            [NSString stringWithFormat:@"config: %s", configPath]];
+            [NSString stringWithFormat:NSLocalizedString(@"settings.config_path", nil), path]];
         pathLabel.font = [NSFont monospacedSystemFontOfSize:10.0 weight:NSFontWeightRegular];
         pathLabel.textColor = [NSColor secondaryLabelColor];
+        pathLabel.lineBreakMode = NSLineBreakByTruncatingMiddle;
         [stack addArrangedSubview:pathLabel];
+        [pathLabel.widthAnchor constraintEqualToAnchor:stack.widthAnchor].active = YES;
     }
+
+    [stack layoutSubtreeIfNeeded];
+    NSSize fitting = stack.fittingSize;
+    CGFloat height = (fitting.height > 100.0) ? fitting.height + kSettingsMargin * 2.0 : 600.0;
+    CGFloat maxHeight = [NSScreen mainScreen].visibleFrame.size.height - 80.0;
+    height = MIN(height, maxHeight);
+    [self.window setContentSize:NSMakeSize(560.0, height)];
 }
 
 - (void)refreshControls {
@@ -312,8 +362,7 @@
     if (path == nil) {
         path = @"";
     }
-    _folderLabel.stringValue =
-        [NSString stringWithFormat:NSLocalizedString(@"settings.folder", nil), path];
+    _folderLabel.stringValue = path;
     _folderLabel.toolTip = path;
 }
 

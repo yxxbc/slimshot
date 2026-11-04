@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "about.h"
 #include "app.h"
 #include "capture.h"
 #include "config.h"
@@ -26,6 +27,7 @@
     NSStatusItem *_statusItem;
     NSMenuItem *_permissionStatusItem;
     SettingsWindowController *_settingsController;
+    SlimAboutWindowController *_aboutController;
     SlimCaptureController *_captureController;
     SlimHotKeyManager *_hotKeyManager;
     CGDirectDisplayID _preferredDisplayID;
@@ -405,8 +407,10 @@
 
 - (void)showAbout:(id)sender {
     (void)sender;
-    [NSApp activateIgnoringOtherApps:YES];
-    [NSApp orderFrontStandardAboutPanel:nil];
+    if (_aboutController == nil) {
+        _aboutController = [[SlimAboutWindowController alloc] init];
+    }
+    [_aboutController present];
 }
 
 - (void)quitApp:(id)sender {

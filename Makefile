@@ -24,6 +24,7 @@ C_SRCS := \
 
 M_SRCS := \
 	src/main.m \
+	src/bridge/about.m \
 	src/bridge/app.m \
 	src/bridge/capture.m \
 	src/bridge/capture_composite.m \
@@ -84,12 +85,14 @@ $(MACOS_DIR)/$(APP_NAME): $(OBJS)
 
 $(APP_BUNDLE): $(MACOS_DIR)/$(APP_NAME) resources/Info.plist \
 		resources/icon/Slimshot.icns \
+		LICENSE \
 		resources/en.lproj/Localizable.strings \
 		resources/zh-Hans.lproj/Localizable.strings \
 		scripts/sign.sh
 	@mkdir -p $(RESOURCES_DIR)/en.lproj $(RESOURCES_DIR)/zh-Hans.lproj
 	cp resources/Info.plist $(CONTENTS_DIR)/Info.plist
 	cp resources/icon/Slimshot.icns $(RESOURCES_DIR)/Slimshot.icns
+	cp LICENSE $(RESOURCES_DIR)/LICENSE
 	cp resources/en.lproj/Localizable.strings $(RESOURCES_DIR)/en.lproj/
 	cp resources/zh-Hans.lproj/Localizable.strings $(RESOURCES_DIR)/zh-Hans.lproj/
 	printf 'APPL????' > $(CONTENTS_DIR)/PkgInfo

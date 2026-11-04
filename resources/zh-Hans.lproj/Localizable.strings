@@ -10,6 +10,12 @@
 "menu.about" = "关于 Slimshot";
 "menu.quit" = "退出 Slimshot";
 
+"about.version" = "版本 %@ (%@)";
+"about.tagline" = "轻量、快速、可插件化的 macOS 截图工具";
+"about.copy_version" = "复制版本信息";
+"about.license" = "许可证";
+"about.close" = "关闭";
+
 "settings.title" = "Slimshot 设置";
 "settings.capture_options" = "截图";
 "settings.include_cursor" = "包含鼠标指针";
@@ -17,19 +23,22 @@
 "settings.copy" = "复制到剪贴板";
 "settings.auto_save" = "自动保存文件";
 "settings.thumbnail" = "显示浮动缩略图";
-"settings.thumbnail_seconds" = "缩略图显示时间：%d 秒（0 = 不自动消失）";
+"settings.thumbnail_seconds_label" = "显示时间";
+"settings.thumbnail_seconds" = "%d 秒（0 = 不自动消失）";
 "settings.output" = "输出";
-"settings.format" = "格式：";
+"settings.format" = "格式";
 "settings.quality.jpeg" = "JPEG 质量";
 "settings.quality.heic" = "HEIC 质量";
-"settings.folder" = "保存目录：%@";
+"settings.folder_label" = "保存目录";
 "settings.choose" = "选择…";
 "settings.open_config" = "打开配置目录";
 "settings.permission" = "屏幕录制权限…";
 "settings.permission.section" = "权限";
-"settings.permission.status.granted" = "屏幕录制：已授权";
-"settings.permission.status.denied" = "屏幕录制：未授权";
+"settings.permission.label" = "屏幕录制";
+"settings.permission.status.granted" = "已授权";
+"settings.permission.status.denied" = "未授权";
 "settings.permission.restart" = "更改权限后需要重新启动 Slimshot。";
+"settings.config_path" = "配置文件：%@";
 "settings.close" = "关闭";
 
 "alert.permission.title" = "需要屏幕录制权限";

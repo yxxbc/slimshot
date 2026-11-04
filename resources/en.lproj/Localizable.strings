@@ -10,6 +10,12 @@
 "menu.about" = "About Slimshot";
 "menu.quit" = "Quit Slimshot";
 
+"about.version" = "Version %@ (%@)";
+"about.tagline" = "A lightweight, fast, plugin-ready screenshot tool for macOS";
+"about.copy_version" = "Copy Version Info";
+"about.license" = "License";
+"about.close" = "Close";
+
 "settings.title" = "Slimshot Settings";
 "settings.capture_options" = "Capture";
 "settings.include_cursor" = "Include mouse cursor";
@@ -17,19 +23,22 @@
 "settings.copy" = "Copy to clipboard";
 "settings.auto_save" = "Save to file automatically";
 "settings.thumbnail" = "Show floating thumbnail";
-"settings.thumbnail_seconds" = "Thumbnail duration: %d s (0 = keep open)";
+"settings.thumbnail_seconds_label" = "Duration";
+"settings.thumbnail_seconds" = "%d s (0 = keep open)";
 "settings.output" = "Output";
-"settings.format" = "Format:";
+"settings.format" = "Format";
 "settings.quality.jpeg" = "JPEG quality";
 "settings.quality.heic" = "HEIC quality";
-"settings.folder" = "Save folder: %@";
+"settings.folder_label" = "Save folder";
 "settings.choose" = "Choose…";
 "settings.open_config" = "Open Config Folder";
 "settings.permission" = "Screen Recording Permission…";
 "settings.permission.section" = "Permission";
-"settings.permission.status.granted" = "Screen Recording: allowed";
-"settings.permission.status.denied" = "Screen Recording: not allowed";
+"settings.permission.label" = "Screen Recording";
+"settings.permission.status.granted" = "Allowed";
+"settings.permission.status.denied" = "Not allowed";
 "settings.permission.restart" = "Restart Slimshot after changing this permission.";
+"settings.config_path" = "Config: %@";
 "settings.close" = "Close";
 
 "alert.permission.title" = "Screen Recording Permission Required";

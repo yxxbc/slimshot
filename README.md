@@ -149,12 +149,13 @@ src/vendor/      cJSON 1.7.18（MIT）
 resources/       Info.plist、中英文 strings、icon（PNG + icns）
 tests/           配置、命名测试
 scripts/         构建、签名、证书、打包、安装
-docs/            设计笔记：跨屏覆盖层与坐标系
+docs/            设计笔记：覆盖层坐标系、设置与关于界面布局
 ```
 
 ## 设计文档
 
 - [跨屏覆盖层与坐标系](docs/cross-screen-overlay.md)：多显示器、Retina、负坐标下的覆盖层设计与事故复盘
+- [设置与关于界面布局](docs/ui-layout.md)：间距、对齐、窗口结构和控件顺序
 
 ## 路线图
 
