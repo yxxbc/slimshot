@@ -29,7 +29,6 @@ typedef NS_ENUM(NSInteger, SlimDragMode) {
 
 typedef NS_ENUM(NSInteger, SlimOverlayButton) {
     SlimOverlayButtonNone,
-    SlimOverlayButtonPlugin,
     SlimOverlayButtonCapture,
     SlimOverlayButtonCancel
 };
@@ -74,10 +73,11 @@ static CGFloat SlimTopSafeInset(NSView *view) {
     NSTrackingArea *_trackingArea;
 
     NSRect _toolbarRect;
-    NSRect _pluginButtonRect;
+    NSArray<NSValue *> *_pluginButtonRects;
     NSRect _captureButtonRect;
     NSRect _cancelButtonRect;
     SlimOverlayButton _hoveredButton;
+    NSInteger _hoveredPluginIndex;
     NSArray<SlimOverlayPluginAction *> *_pluginActions;
 }
 
@@ -146,6 +146,7 @@ static CGFloat SlimTopSafeInset(NSView *view) {
 
 - (void)setPluginActions:(NSArray<SlimOverlayPluginAction *> *)actions {
     _pluginActions = [actions copy];
+    _hoveredPluginIndex = -1;
     [self setNeedsDisplay:YES];
 }
 
@@ -360,10 +361,12 @@ static CGFloat SlimTopSafeInset(NSView *view) {
 
     [self updateToolbarLayout];
     if (SlimRectIsValid(_toolbarRect)) {
-        if (SlimRectIsValid(_pluginButtonRect) &&
-            NSPointInRect(point, _pluginButtonRect)) {
-            [self showPluginMenu];
-            return;
+        for (NSUInteger index = 0; index < _pluginButtonRects.count; index++) {
+            if (NSPointInRect(point, [_pluginButtonRects[index] rectValue])) {
+                SlimOverlayPluginAction *action = _pluginActions[index];
+                [self finishRegionWithPluginID:action.identifier];
+                return;
+            }
         }
         if (NSPointInRect(point, _captureButtonRect)) {
             [self finishRegion];
@@ -487,12 +490,17 @@ static CGFloat SlimTopSafeInset(NSView *view) {
         _highlightedWindow = [self windowAtPoint:point];
     }
 
+    NSInteger pluginIndex = [self pluginIndexAtPoint:point];
+    if (pluginIndex != _hoveredPluginIndex) {
+        _hoveredPluginIndex = pluginIndex;
+    }
+
     SlimOverlayButton hovered = [self buttonAtPoint:point];
     if (hovered != _hoveredButton) {
         _hoveredButton = hovered;
     }
 
-    if (hovered != SlimOverlayButtonNone) {
+    if (pluginIndex >= 0 || hovered != SlimOverlayButtonNone) {
         [[NSCursor pointingHandCursor] set];
     } else if (SlimRectIsValid(_toolbarRect) && NSPointInRect(point, _toolbarRect)) {
         [[NSCursor arrowCursor] set];
@@ -504,8 +512,16 @@ static CGFloat SlimTopSafeInset(NSView *view) {
 
 - (void)mouseExited:(NSEvent *)event {
     (void)event;
+    BOOL changed = NO;
     if (_hoveredButton != SlimOverlayButtonNone) {
         _hoveredButton = SlimOverlayButtonNone;
+        changed = YES;
+    }
+    if (_hoveredPluginIndex >= 0) {
+        _hoveredPluginIndex = -1;
+        changed = YES;
+    }
+    if (changed) {
         [self setNeedsDisplay:YES];
     }
 }
@@ -554,43 +570,14 @@ static CGFloat SlimTopSafeInset(NSView *view) {
     [_delegate overlayView:self didSelectRegion:rect pluginID:pluginID];
 }
 
-- (NSString *)pluginButtonTitle {
-    if (_pluginActions.count == 1) {
-        return _pluginActions.firstObject.title;
+- (NSInteger)pluginIndexAtPoint:(NSPoint)point {
+    [self updateToolbarLayout];
+    for (NSUInteger index = 0; index < _pluginButtonRects.count; index++) {
+        if (NSPointInRect(point, [_pluginButtonRects[index] rectValue])) {
+            return (NSInteger)index;
+        }
     }
-    if (_pluginActions.count > 1) {
-        return NSLocalizedString(@"overlay.plugins", nil);
-    }
-    return nil;
-}
-
-- (void)showPluginMenu {
-    if (_pluginActions.count == 0) {
-        return;
-    }
-    if (_pluginActions.count == 1) {
-        [self finishRegionWithPluginID:_pluginActions.firstObject.identifier];
-        return;
-    }
-
-    NSMenu *menu = [[NSMenu alloc] initWithTitle:@""];
-    for (SlimOverlayPluginAction *action in _pluginActions) {
-        NSMenuItem *item =
-            [[NSMenuItem alloc] initWithTitle:action.title
-                                       action:@selector(runPluginAction:)
-                                keyEquivalent:@""];
-        item.target = self;
-        item.representedObject = action.identifier;
-        [menu addItem:item];
-    }
-    NSPoint location = NSMakePoint(NSMinX(_pluginButtonRect),
-                                   NSMaxY(_pluginButtonRect) + 4.0);
-    [menu popUpMenuPositioningItem:nil atLocation:location inView:self];
-}
-
-- (void)runPluginAction:(NSMenuItem *)sender {
-    NSString *identifier = sender.representedObject;
-    [self finishRegionWithPluginID:identifier];
+    return -1;
 }
 
 - (NSCursor *)cursorForPoint:(NSPoint)point {
@@ -599,8 +586,7 @@ static CGFloat SlimTopSafeInset(NSView *view) {
     }
 
     [self updateToolbarLayout];
-    if ((SlimRectIsValid(_pluginButtonRect) &&
-         NSPointInRect(point, _pluginButtonRect)) ||
+    if ([self pluginIndexAtPoint:point] >= 0 ||
         NSPointInRect(point, _captureButtonRect) ||
         NSPointInRect(point, _cancelButtonRect)) {
         return [NSCursor pointingHandCursor];
@@ -710,7 +696,7 @@ static CGFloat SlimTopSafeInset(NSView *view) {
 
 - (void)updateToolbarLayout {
     _toolbarRect = NSZeroRect;
-    _pluginButtonRect = NSZeroRect;
+    _pluginButtonRects = @[];
     _captureButtonRect = NSZeroRect;
     _cancelButtonRect = NSZeroRect;
     if (!_showsToolbar || _mode != SlimOverlayModeRegion ||
@@ -723,7 +709,6 @@ static CGFloat SlimTopSafeInset(NSView *view) {
     NSString *sizeText = [self selectionText];
     NSString *captureTitle = NSLocalizedString(@"overlay.capture", nil);
     NSString *cancelTitle = NSLocalizedString(@"overlay.cancel", nil);
-    NSString *pluginTitle = [self pluginButtonTitle];
 
     NSSize sizeTextSize = [sizeText sizeWithAttributes:labelAttrs];
     NSSize captureTextSize = [captureTitle sizeWithAttributes:buttonAttrs];
@@ -735,16 +720,15 @@ static CGFloat SlimTopSafeInset(NSView *view) {
     CGFloat barHeight = buttonHeight + 12.0;
     CGFloat captureWidth = MAX(70.0, captureTextSize.width + 18.0);
     CGFloat cancelWidth = MAX(54.0, cancelTextSize.width + 18.0);
-    CGFloat pluginWidth = 0.0;
-    if (pluginTitle.length > 0) {
-        NSSize pluginTextSize = [pluginTitle sizeWithAttributes:buttonAttrs];
-        pluginWidth = MIN(MAX(54.0, pluginTextSize.width + 18.0), 140.0);
+
+    CGFloat pluginTotalWidth = 0.0;
+    for (SlimOverlayPluginAction *action in _pluginActions) {
+        NSSize textSize = [action.title sizeWithAttributes:buttonAttrs];
+        pluginTotalWidth += MIN(MAX(54.0, textSize.width + 18.0), 140.0) + gap;
     }
-    CGFloat barWidth = padding + sizeTextSize.width + gap;
-    if (pluginWidth > 0.0) {
-        barWidth += pluginWidth + gap;
-    }
-    barWidth += captureWidth + gap + cancelWidth + padding;
+
+    CGFloat barWidth = padding + sizeTextSize.width + gap + pluginTotalWidth +
+                       captureWidth + gap + cancelWidth + padding;
 
     NSRect bounds = self.bounds;
     CGFloat minY = SlimTopSafeInset(self) + 8.0;
@@ -759,10 +743,17 @@ static CGFloat SlimTopSafeInset(NSView *view) {
     _toolbarRect = NSMakeRect(x, y, barWidth, barHeight);
     CGFloat buttonY = y + (barHeight - buttonHeight) / 2.0;
     CGFloat buttonsX = x + padding + sizeTextSize.width + gap;
-    if (pluginWidth > 0.0) {
-        _pluginButtonRect = NSMakeRect(buttonsX, buttonY, pluginWidth, buttonHeight);
-        buttonsX = NSMaxX(_pluginButtonRect) + gap;
+
+    NSMutableArray<NSValue *> *pluginRects = [NSMutableArray array];
+    for (SlimOverlayPluginAction *action in _pluginActions) {
+        NSSize textSize = [action.title sizeWithAttributes:buttonAttrs];
+        CGFloat width = MIN(MAX(54.0, textSize.width + 18.0), 140.0);
+        NSRect rect = NSMakeRect(buttonsX, buttonY, width, buttonHeight);
+        [pluginRects addObject:[NSValue valueWithRect:rect]];
+        buttonsX = NSMaxX(rect) + gap;
     }
+    _pluginButtonRects = pluginRects;
+
     _captureButtonRect = NSMakeRect(buttonsX, buttonY, captureWidth, buttonHeight);
     _cancelButtonRect = NSMakeRect(NSMaxX(_captureButtonRect) + gap, buttonY,
                                    cancelWidth, buttonHeight);
@@ -770,10 +761,6 @@ static CGFloat SlimTopSafeInset(NSView *view) {
 
 - (SlimOverlayButton)buttonAtPoint:(NSPoint)point {
     [self updateToolbarLayout];
-    if (SlimRectIsValid(_pluginButtonRect) &&
-        NSPointInRect(point, _pluginButtonRect)) {
-        return SlimOverlayButtonPlugin;
-    }
     if (NSPointInRect(point, _captureButtonRect)) {
         return SlimOverlayButtonCapture;
     }
@@ -832,10 +819,12 @@ static CGFloat SlimTopSafeInset(NSView *view) {
            withAttributes:labelAttrs];
 
     NSDictionary *buttonAttrs = [self buttonAttributes];
-    if (SlimRectIsValid(_pluginButtonRect)) {
-        [self drawButtonInRect:_pluginButtonRect
-                         title:[self pluginButtonTitle]
-                       hovered:(_hoveredButton == SlimOverlayButtonPlugin)
+    for (NSUInteger index = 0;
+         index < _pluginButtonRects.count && index < _pluginActions.count;
+         index++) {
+        [self drawButtonInRect:[_pluginButtonRects[index] rectValue]
+                         title:_pluginActions[index].title
+                       hovered:(_hoveredPluginIndex == (NSInteger)index)
                        primary:NO
                     attributes:buttonAttrs];
     }
